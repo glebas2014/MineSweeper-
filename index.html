@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Minesweeper</title>
-
 <style>
 :root{
   --bg1:#667eea;
@@ -14,9 +13,9 @@
 }
 *{box-sizing:border-box}
 body{
-    font-family: Inter, Arial, sans-serif;
-    background: linear-gradient(135deg,var(--bg1),var(--bg2));
-    margin:0;display:flex;flex-direction:column;align-items:center;padding:18px;color:#fff;min-height:100vh;
+  font-family: Inter, Arial, sans-serif;
+  background: linear-gradient(135deg,var(--bg1),var(--bg2));
+  margin:0;display:flex;flex-direction:column;align-items:center;padding:18px;color:#fff;min-height:100vh;
 }
 .container{width:100%;max-width:720px}
 .header{display:flex;align-items:center;justify-content:space-between;gap:12px}
@@ -27,12 +26,11 @@ button:active{transform:scale(.98)}
 #difficulty{display:flex;gap:8px}
 .diff-btn{padding:6px 10px;border-radius:8px;background:transparent}
 .diff-btn.selected{background:var(--accent)}
-.toolbar{display:flex;gap:12px;align-items:center}
 .stats{display:flex;gap:12px;align-items:center;background:var(--panel);padding:8px;border-radius:10px}
 .stat{font-size:0.9rem}
 .stat .value{font-weight:700;font-size:1.05rem}
 
-/* Board container - auto-fit and mobile-friendly */
+/* Board container */
 .board-wrap{margin-top:12px;background:var(--panel);padding:10px;border-radius:12px;display:flex;justify-content:center}
 #board{display:grid;gap:6px;padding:6px;border-radius:8px;background:#2f2f2f;touch-action:none;transition:transform .15s ease}
 /* cells */
@@ -42,21 +40,16 @@ button:active{transform:scale(.98)}
 .cell.flagged::before{content:"🚩"}
 .cell.mine::after{content:"💣"}
 .cell.mine.revealed{background:#ff6b6b;color:#fff}
-.cell:nth-child(odd){}
-.number-1{color:#1976d2}
-.number-2{color:#388e3c}
-.number-3{color:#d32f2f}
-.number-4{color:#7b1fa2}
-.number-5{color:#ff8f00}
-.number-6{color:#0097a7}
-.number-7{color:#5d4037}
-.number-8{color:#455a64}
+.cell.number-1,.cell.number-2,.cell.number-3,.cell.number-4,
+.cell.number-5,.cell.number-6,.cell.number-7,.cell.number-8{
+  color:#000; /* цифры черные */
+}
 
 /* subtle reveal animation */
 .cell.revealed{animation:pop .12s ease}
 @keyframes pop{from{transform:scale(.96);opacity:.9}to{transform:none;opacity:1}}
 
-/* responsive scaling to fit smaller screens without scroll */
+/* responsive */
 @media (max-width:720px){
   #board{gap:4px;padding:4px}
   .cell{width:30px;height:30px;font-size:0.95rem;border-radius:5px}
@@ -72,20 +65,19 @@ button:active{transform:scale(.98)}
 .modal .panel{background:#fff;color:#111;padding:16px;border-radius:12px;max-width:420px;width:90%}
 .modal .panel h3{margin-top:0}
 
-/* small helper */
-.controls-right{display:flex;gap:8px;align-items:center}
+/* game result */
+#gameResult{text-align:center;font-size:1.5rem;font-weight:700;margin:8px 0;color:#ffd700}
 </style>
 </head>
 <body>
 <div class="container">
   <div class="header">
     <h1>🎯 Minesweeper</h1>
-    <div class="toolbar">
-      <div class="stats">
-        <div class="stat">Мины: <span id="mines-remaining" class="value">10</span></div>
-        <div class="stat">Флаги: <span id="flags-count" class="value">0</span></div>
-        <div class="stat">Время: <span id="timer" class="value">0</span>s</div>
-      </div>
+    <div id="gameResult"></div>
+    <div class="stats">
+      <div class="stat">Мины: <span id="mines-remaining" class="value">10</span></div>
+      <div class="stat">Флаги: <span id="flags-count" class="value">0</span></div>
+      <div class="stat">Время: <span id="timer" class="value">0</span>s</div>
     </div>
   </div>
 
@@ -102,10 +94,8 @@ button:active{transform:scale(.98)}
   <div class="board-wrap">
     <div id="board" role="grid" aria-label="Minesweeper board"></div>
   </div>
-
 </div>
 
-<!-- Rules modal -->
 <div class="modal" id="modal">
   <div class="panel">
     <h3>Правила Minesweeper</h3>
@@ -120,78 +110,92 @@ button:active{transform:scale(.98)}
 </div>
 
 <script>
-// Game logic with timer, mobile long-press flags and responsive scaling
 const difficulties = {
-  easy: {rows:9, cols:9, mines:10},
-  medium: {rows:16, cols:16, mines:40},
-  hard: {rows:16, cols:30, mines:99}
+  easy:{rows:9,cols:9,mines:10},
+  medium:{rows:16,cols:16,mines:40},
+  hard:{rows:16,cols:30,mines:99}
 };
 let current='easy';
 let rows=difficulties[current].rows, cols=difficulties[current].cols, mines=difficulties[current].mines;
-let board=[]; let first=true; let flags=0; let timer=0; let timerId=null; let gameState='playing';
+let board=[], first=true, flags=0, timer=0, timerId=null, gameState='playing';
 
 const boardEl = document.getElementById('board');
 const minesRemEl = document.getElementById('mines-remaining');
 const flagsEl = document.getElementById('flags-count');
 const timerEl = document.getElementById('timer');
+const gameResultEl = document.getElementById('gameResult');
 
-function updateStats(){ minesRemEl.textContent = mines - flags; flagsEl.textContent = flags; timerEl.textContent = timer; }
+function updateStats(){ minesRemEl.textContent=mines-flags; flagsEl.textContent=flags; timerEl.textContent=timer; }
 
-function setDifficulty(d){ current=d; rows=difficulties[d].rows; cols=difficulties[d].cols; mines=difficulties[d].mines; document.querySelectorAll('.diff-btn').forEach(b=>b.classList.toggle('selected', b.dataset.diff===d)); newGame(); }
+function setDifficulty(d){ 
+  current=d; 
+  rows=difficulties[d].rows; cols=difficulties[d].cols; mines=difficulties[d].mines;
+  document.querySelectorAll('.diff-btn').forEach(b=>b.classList.toggle('selected', b.dataset.diff===d)); 
+  newGame(); 
+}
 
 document.getElementById('difficulty').addEventListener('click', e=>{ if(e.target.classList.contains('diff-btn')) setDifficulty(e.target.dataset.diff); });
-
 document.getElementById('newBtn').addEventListener('click', newGame);
 document.getElementById('rulesBtn').addEventListener('click', ()=>document.getElementById('modal').style.display='flex');
 document.getElementById('closeModal').addEventListener('click', ()=>document.getElementById('modal').style.display='none');
 
-function startTimer(){ stopTimer(); timer=0; timerId = setInterval(()=>{ timer++; updateStats(); },1000); }
+function startTimer(){ stopTimer(); timer=0; timerId=setInterval(()=>{ timer++; updateStats(); },1000); }
 function stopTimer(){ if(timerId){ clearInterval(timerId); timerId=null; } }
 
-function newGame(){ stopTimer(); first=true; gameState='playing'; flags=0; updateStats(); boardEl.innerHTML=''; boardEl.style.gridTemplateColumns = `repeat(${cols}, 1fr)`; board=[];
-  // create cells
-  for(let r=0;r<rows;r++){ board[r]=[]; for(let c=0;c<cols;c++){ const cell = document.createElement('div'); cell.className='cell'; cell.tabIndex=0; cell.dataset.r=r; cell.dataset.c=c; boardEl.appendChild(cell);
-        board[r][c] = {mine:false, rev:false, flag:false, adj:0, el:cell};
-        // click
-        cell.addEventListener('click', ()=>clickCell(r,c));
-        // right click
-        cell.addEventListener('contextmenu', (ev)=>{ ev.preventDefault(); toggleFlag(r,c); });
-        // accessibility keyboard (Enter to open, Space to flag)
-        cell.addEventListener('keydown', (ev)=>{ if(ev.key==='Enter') clickCell(r,c); if(ev.key===' '){ ev.preventDefault(); toggleFlag(r,c); } });
-        // mobile long-press for flag
-        let pressTimer=null;
-        cell.addEventListener('touchstart', (ev)=>{ ev.preventDefault(); pressTimer = setTimeout(()=>toggleFlag(r,c), 600); });
-        cell.addEventListener('touchend', ()=>{ clearTimeout(pressTimer); });
-        cell.addEventListener('touchmove', ()=>{ clearTimeout(pressTimer); });
+function newGame(){
+  stopTimer(); first=true; gameState='playing'; flags=0; updateStats(); gameResultEl.textContent='';
+  boardEl.innerHTML=''; boardEl.style.gridTemplateColumns=`repeat(${cols},1fr)`; board=[];
+  for(let r=0;r<rows;r++){ board[r]=[]; for(let c=0;c<cols;c++){
+    const cell=document.createElement('div'); cell.className='cell'; cell.tabIndex=0; cell.dataset.r=r; cell.dataset.c=c; boardEl.appendChild(cell);
+    board[r][c]={mine:false,rev:false,flag:false,adj:0,el:cell};
+    cell.addEventListener('click',()=>clickCell(r,c));
+    cell.addEventListener('contextmenu',(ev)=>{ ev.preventDefault(); toggleFlag(r,c); });
+    let pressTimer=null;
+    cell.addEventListener('touchstart',(ev)=>{ ev.preventDefault(); pressTimer=setTimeout(()=>toggleFlag(r,c),600); });
+    cell.addEventListener('touchend',()=>{ clearTimeout(pressTimer); });
+    cell.addEventListener('touchmove',()=>{ clearTimeout(pressTimer); });
   }}
-  // try to scale board to viewport height if too tall
   requestAnimationFrame(()=>fitBoard());
 }
 
-function fitBoard(){ const wrap = document.querySelector('.board-wrap'); const availH = window.innerHeight - wrap.getBoundingClientRect().top - 40; const cellSize = parseFloat(getComputedStyle(document.querySelector('.cell')).width); const neededH = rows * (cellSize + parseFloat(getComputedStyle(boardEl).gap)); if(neededH>availH){ const scale = (availH / neededH) * 0.98; boardEl.style.transform = `scale(${scale})`; boardEl.style.transformOrigin='top center'; } else { boardEl.style.transform = 'none'; }}
-window.addEventListener('resize', fitBoard);
+function fitBoard(){ 
+  const wrap=document.querySelector('.board-wrap'); 
+  const availH=window.innerHeight-wrap.getBoundingClientRect().top-40; 
+  const cellSize=parseFloat(getComputedStyle(document.querySelector('.cell')).width); 
+  const neededH=rows*(cellSize+parseFloat(getComputedStyle(boardEl).gap)); 
+  if(neededH>availH){ const scale=(availH/neededH)*0.98; boardEl.style.transform=`scale(${scale})`; boardEl.style.transformOrigin='top center'; }
+  else boardEl.style.transform='none'; 
+}
+window.addEventListener('resize',fitBoard);
 
-function placeMines(fr,fc){ let placed=0; while(placed<mines){ const r=Math.floor(Math.random()*rows), c=Math.floor(Math.random()*cols); if(Math.abs(r-fr)<=1 && Math.abs(c-fc)<=1) continue; if(board[r][c].mine) continue; board[r][c].mine=true; placed++; } // adj
-  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){ if(board[r][c].mine) continue; let cnt=0; for(let i=-1;i<=1;i++) for(let j=-1;j<=1;j++){ const nr=r+i,nc=c+j; if(nr>=0&&nr<rows&&nc>=0&&nc<cols && board[nr][nc].mine) cnt++; } board[r][c].adj=cnt; }
+function placeMines(fr,fc){ let placed=0; while(placed<mines){
+  const r=Math.floor(Math.random()*rows), c=Math.floor(Math.random()*cols);
+  if(Math.abs(r-fr)<=1 && Math.abs(c-fc)<=1) continue;
+  if(board[r][c].mine) continue;
+  board[r][c].mine=true; placed++;
+}
+// adj
+for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){ if(board[r][c].mine) continue; let cnt=0; for(let i=-1;i<=1;i++) for(let j=-1;j<=1;j++){ const nr=r+i,nc=c+j; if(nr>=0&&nr<rows&&nc>=0&&nc<cols && board[nr][nc].mine) cnt++; } board[r][c].adj=cnt; }
 }
 
-function clickCell(r,c){ if(gameState!=='playing') return; const cellObj = board[r][c]; if(cellObj.rev || cellObj.flag) return; if(first){ first=false; placeMines(r,c); startTimer(); }
+function clickCell(r,c){ if(gameState!=='playing') return; const cellObj=board[r][c]; if(cellObj.rev || cellObj.flag) return; if(first){ first=false; placeMines(r,c); startTimer(); }
   if(cellObj.mine){ revealMine(r,c); gameOver(false); return; }
-  floodReveal(r,c); checkWin(); }
+  floodReveal(r,c); checkWin(); 
+}
+
+function floodReveal(r,c){ const obj=board[r][c]; if(obj.rev || obj.flag) return; obj.rev=true; obj.el.classList.add('revealed'); if(obj.adj>0){ obj.el.textContent=obj.adj; obj.el.classList.add('number-'+obj.adj); return; } for(let i=-1;i<=1;i++) for(let j=-1;j<=1;j++){ const nr=r+i,nc=c+j; if(nr>=0 && nr<rows && nc>=0 && nc<cols) floodReveal(nr,nc); } }
+
+function toggleFlag(r,c){ if(gameState!=='playing') return; const obj=board[r][c]; if(obj.rev) return; obj.flag=!obj.flag; obj.el.textContent=''; obj.el.classList.remove('flagged'); 
+if(obj.flag){ flags++; obj.el.classList.add('flagged'); obj.el.textContent='🚩'; } else { flags--; } updateStats(); }
 
 function revealMine(r,c){ board[r][c].rev=true; board[r][c].el.classList.add('revealed','mine'); board[r][c].el.textContent='💣'; }
 
-function floodReveal(r,c){ const obj = board[r][c]; if(obj.rev || obj.flag) return; obj.rev=true; obj.el.classList.add('revealed'); if(obj.adj>0){ obj.el.textContent = obj.adj; obj.el.classList.add('number-'+obj.adj); return; } for(let i=-1;i<=1;i++) for(let j=-1;j<=1;j++){ const nr=r+i,nc=c+j; if(nr>=0&&nr<rows&&nc>=0&&nc<cols) floodReveal(nr,nc); }}
+function revealAll(){ for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){ if(board[r][c].mine){ board[r][c].el.classList.add('revealed','mine'); board[r][c].el.textContent='💣'; } } }
 
-function toggleFlag(r,c){ if(gameState!=='playing') return; const obj = board[r][c]; if(obj.rev) return; obj.flag = !obj.flag; if(obj.flag){ flags++; obj.el.classList.add('flagged'); obj.el.textContent='🚩'; } else { flags--; obj.el.classList.remove('flagged'); obj.el.textContent=''; } updateStats(); checkWin(); }
+function checkWin(){ let safeLeft=0; for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){ if(!board[r][c].mine && !board[r][c].rev) safeLeft++; } if(safeLeft===0) gameOver(true); }
 
-function revealAll(){ for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){ if(board[r][c].mine){ board[r][c].el.classList.add('revealed','mine'); board[r][c].el.textContent='💣'; } }}
+function gameOver(win){ gameState=win?'win':'lose'; stopTimer(); if(!win) revealAll(); gameResultEl.textContent=win?`Победа! За ${timer} сек.`:'Поражение!'; }
 
-function checkWin(){ let safeLeft=0; for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){ if(!board[r][c].mine && !board[r][c].rev) safeLeft++; } if(safeLeft===0){ gameOver(true); } }
-
-function gameOver(win){ gameState = win? 'win' : 'lose'; stopTimer(); if(!win) revealAll(); setTimeout(()=>{ alert(win? `Победа! За ${timer} сек.` : 'Вы наткнулись на мину!'); },120); }
-
-// initialize
 newGame();
 </script>
 </body>
