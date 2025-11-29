@@ -62,7 +62,7 @@ button:active{transform:scale(.98)}
 @keyframes pop{from{transform:scale(.96);opacity:.9}to{transform:none;opacity:1}}
 
 .explosion{
-    position:absolute;pointer-events:none;width:6px;height:6px;animation:burst .5s ease-out forwards;
+    position:absolute;pointer-events:none;width:6px;height:6px;background:#d6d6d6;animation:burst .5s ease-out forwards;
 }
 @keyframes burst{
   0%{transform:translate(0,0) scale(1);opacity:1}
@@ -91,16 +91,6 @@ button:active{transform:scale(.98)}
       <button class="diff-btn selected" data-diff="easy">Легко</button>
       <button class="diff-btn" data-diff="medium">Средне</button>
       <button class="diff-btn" data-diff="hard">Сложно</button>
-    </div>
-    <div id="explosionPanel" style="display:flex; gap:8px; margin-left:12px; flex-wrap:wrap;">
-        <select id="explosionType">
-            <option value="smoke">Дым</option>
-            <option value="shards">Осколки</option>
-        </select>
-        <select id="particleShape">
-            <option value="circle">Круглые</option>
-            <option value="square">Квадратные</option>
-        </select>
     </div>
   </div>
 
@@ -147,17 +137,16 @@ function newGame(){
 
 function fitBoard(){
     const wrap=document.querySelector('.board-wrap');
+    const availableWidth=wrap.clientWidth - 10;
     const availableHeight=window.innerHeight - wrap.getBoundingClientRect().top - 40;
     const cellSize=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cell-size'));
     const gap=parseFloat(getComputedStyle(boardEl).gap);
+    const neededWidth=cols*(cellSize + gap);
     const neededHeight=rows*(cellSize + gap);
-    if(neededHeight>availableHeight){
-        const scale=Math.max(16/cellSize, (availableHeight/neededHeight)*0.95);
-        boardEl.style.transform=`scale(${scale})`;
-        boardEl.style.transformOrigin='top center';
-    }else{
-        boardEl.style.transform='scale(1)';
-    }
+    let scale=Math.min(availableWidth/neededWidth, availableHeight/neededHeight, 1);
+    scale=Math.max(scale, 16/cellSize);
+    boardEl.style.transform=`scale(${scale})`;
+    boardEl.style.transformOrigin='top center';
 }
 
 window.addEventListener('resize', fitBoard);
@@ -175,15 +164,12 @@ function toggleFlag(r,c){if(gameState!=='playing')return;const o=board[r][c];if(
 function explode(r,c){
     const cell=board[r][c].el;
     const rect=cell.getBoundingClientRect();
-    const type=document.getElementById("explosionType").value;
-    const shape=document.getElementById("particleShape").value;
     let count = current==="easy"?32: current==="medium"?48: 64;
     for(let i=0;i<count;i++){
         if(current!=="easy" && Math.random()<0.4) continue; // пропуски
         const p=document.createElement("div");
         p.className="explosion";
-        p.style.borderRadius=shape==="circle"?"50%":"0%";
-        p.style.background=type==="smoke"?"rgba(200,200,200,.8)":"#d6d6d6";
+        p.style.borderRadius="0%";
         const x = rect.left+rect.width/2;
         const y = rect.top+rect.height/2;
         p.style.left=x+"px";
