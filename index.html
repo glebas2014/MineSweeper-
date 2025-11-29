@@ -142,7 +142,25 @@ function newGame(){
     cell.addEventListener('touchstart',()=>{pressTimer=setTimeout(()=>toggleFlag(r,c),600);});
     cell.addEventListener('touchend',()=>clearTimeout(pressTimer));
     }}
+    fitBoard();
 }
+
+function fitBoard(){
+    const wrap=document.querySelector('.board-wrap');
+    const availableHeight=window.innerHeight - wrap.getBoundingClientRect().top - 40;
+    const cellSize=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cell-size'));
+    const gap=parseFloat(getComputedStyle(boardEl).gap);
+    const neededHeight=rows*(cellSize + gap);
+    if(neededHeight>availableHeight){
+        const scale=Math.max(16/cellSize, (availableHeight/neededHeight)*0.95);
+        boardEl.style.transform=`scale(${scale})`;
+        boardEl.style.transformOrigin='top center';
+    }else{
+        boardEl.style.transform='scale(1)';
+    }
+}
+
+window.addEventListener('resize', fitBoard);
 
 function placeMines(fr,fc){let p=0;while(p<mines){let r=Math.floor(Math.random()*rows),c=Math.floor(Math.random()*cols);if(Math.abs(r-fr)<=1&&Math.abs(c-fc)<=1)continue;if(board[r][c].mine)continue;board[r][c].mine=true;p++;}
 for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){if(board[r][c].mine)continue;let cnt=0;for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++){let nr=r+i,nc=c+j;if(nr>=0&&nr<rows&&nc>=0&&nc<cols&&board[nr][nc].mine)cnt++;}board[r][c].adj=cnt;}}
@@ -159,9 +177,7 @@ function explode(r,c){
     const rect=cell.getBoundingClientRect();
     const type=document.getElementById("explosionType").value;
     const shape=document.getElementById("particleShape").value;
-
     let count = current==="easy"?32: current==="medium"?48: 64;
-
     for(let i=0;i<count;i++){
         if(current!=="easy" && Math.random()<0.4) continue; // пропуски
         const p=document.createElement("div");
@@ -185,6 +201,7 @@ function explode(r,c){
 function revealAll(){for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)if(board[r][c].mine)board[r][c].el.innerHTML='💣';}
 function checkWin(){let safe=0;for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)if(!board[r][c].mine&&!board[r][c].rev)safe++;if(safe===0)gameOver(true);}
 function gameOver(win){gameState=win?'win':'lose';stopTimer();if(!win)revealAll();resultText.textContent=win?`🎉 Победа! Время: ${timer}s`:`💥 Поражение`;}
+
 newGame();
 </script>
 </body>
