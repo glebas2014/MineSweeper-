@@ -70,6 +70,7 @@ button:active{transform:scale(.98)}
 }
 
 #resultText{margin-top:14px;font-size:1.4rem;font-weight:700;text-shadow:0 2px 4px #00000070;height:32px;text-align:center}
+.select-panel{display:flex;gap:8px;align-items:center;margin-left:auto;margin-top:4px;}
 </style>
 </head>
 <body>
@@ -87,11 +88,20 @@ button:active{transform:scale(.98)}
 
   <div class="controls">
     <button id="newBtn">Новая игра</button>
-    <div id="difficulty" style="margin-left:auto">
+    <div id="difficulty">
       <button class="diff-btn selected" data-diff="easy">Легко</button>
       <button class="diff-btn" data-diff="medium">Средне</button>
       <button class="diff-btn" data-diff="hard">Сложно</button>
     </div>
+  </div>
+
+  <div class="select-panel">
+    <label>Эффект взрыва:
+      <select id="explosionEffect">
+        <option value="shards">Осколки</option>
+        <option value="smoke">Дым</option>
+      </select>
+    </label>
   </div>
 
   <div class="board-wrap"><div id="board"></div></div>
@@ -105,12 +115,12 @@ const difficulties={
   hard:{rows:16,cols:30,mines:99,cellSize:18}
 };
 let current='easy',rows,cols,mines,board,first,timer,flags,gameState,timerId;
-
 const boardEl=document.getElementById('board');
 const minesRemEl=document.getElementById('mines-remaining');
 const flagsEl=document.getElementById('flags-count');
 const timerEl=document.getElementById('timer');
 const resultText=document.getElementById('resultText');
+const explosionEffectSelect=document.getElementById('explosionEffect');
 
 function updateStats(){minesRemEl.textContent=mines-flags;flagsEl.textContent=flags;timerEl.textContent=timer;}
 function resetDims(){rows=difficulties[current].rows;cols=difficulties[current].cols;mines=difficulties[current].mines;document.documentElement.style.setProperty('--cell-size',difficulties[current].cellSize+'px');}
@@ -148,7 +158,6 @@ function fitBoard(){
     boardEl.style.transform=`scale(${scale})`;
     boardEl.style.transformOrigin='top center';
 }
-
 window.addEventListener('resize', fitBoard);
 
 function placeMines(fr,fc){let p=0;while(p<mines){let r=Math.floor(Math.random()*rows),c=Math.floor(Math.random()*cols);if(Math.abs(r-fr)<=1&&Math.abs(c-fc)<=1)continue;if(board[r][c].mine)continue;board[r][c].mine=true;p++;}
@@ -163,25 +172,29 @@ function toggleFlag(r,c){if(gameState!=='playing')return;const o=board[r][c];if(
 
 function explode(r,c){
     const cell=board[r][c].el;
-    const rect=cell.getBoundingClientRect();
-    let count = current==="easy"?32: current==="medium"?48: 64;
-    for(let i=0;i<count;i++){
-        if(current!=="easy" && Math.random()<0.4) continue; // пропуски
-        const p=document.createElement("div");
-        p.className="explosion";
-        p.style.borderRadius="0%";
-        const x = rect.left+rect.width/2;
-        const y = rect.top+rect.height/2;
-        p.style.left=x+"px";
-        p.style.top=y+"px";
-        const tx=(Math.random()*200-100);
-        const ty=(Math.random()*200-100);
-        p.style.setProperty("--tx",tx+"px");
-        p.style.setProperty("--ty",ty+"px");
-        document.body.appendChild(p);
-        setTimeout(()=>p.remove(),500);
+    if(!cell.classList.contains("mine")){ // чтобы бомба одна
+        const rect=cell.getBoundingClientRect();
+        const effect=explosionEffectSelect.value;
+        let count = current==="easy"?32: current==="medium"?48: 64;
+        for(let i=0;i<count;i++){
+            if(current!=="easy" && Math.random()<0.4) continue;
+            const p=document.createElement("div");
+            p.className="explosion";
+            p.style.borderRadius="0%";
+            const x = rect.left+rect.width/2;
+            const y = rect.top+rect.height/2;
+            p.style.left=x+"px";
+            p.style.top=y+"px";
+            let tx=(Math.random()*200-100);
+            let ty=(Math.random()*200-100);
+            if(effect==="smoke"){tx*=0.5;ty*=0.5;p.style.background="#888";} // дым медленнее и серый
+            p.style.setProperty("--tx",tx+"px");
+            p.style.setProperty("--ty",ty+"px");
+            document.body.appendChild(p);
+            setTimeout(()=>p.remove(),500);
+        }
+        cell.classList.add("revealed","mine");
     }
-    cell.classList.add("revealed","mine");
 }
 
 function revealAll(){for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)if(board[r][c].mine)board[r][c].el.innerHTML='💣';}
