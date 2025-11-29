@@ -1,121 +1,132 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Minesweeper — Ultimate</title>
+<title>Minesweeper — FX</title>
 <style>
   :root{
-    --bg1:#667eea; --bg2:#764ba2; --panel: rgba(255,255,255,0.08);
-    --cell:#dcdcdc; --cell-open:#f3f3f3; --text:#111; --accent:#ffd54f;
+    --bg1:#667eea; --bg2:#764ba2;
+    --panel: rgba(255,255,255,0.08);
+    --accent:#ffd54f;
+    --cell-size:36px; /* default, will be adjusted by difficulty */
   }
-  body.dark{ --bg1:#1b263b; --bg2:#0f1724; --panel: rgba(255,255,255,0.04); --cell:#2f3a4a; --cell-open:#6e7b8c; --text:#fff; --accent:#ffb74d; }
   *{box-sizing:border-box}
-  html,body{height:100%}
+  html,body{height:100%;margin:0}
   body{
-    margin:0; min-height:100%; font-family:Inter,Arial,sans-serif;
-    display:flex; flex-direction:column; align-items:center; gap:12px; padding:16px;
-    background:linear-gradient(135deg,var(--bg1),var(--bg2)); color:var(--text);
-    transition: background .25s, color .25s;
+    font-family: Inter, Arial, sans-serif;
+    background: linear-gradient(135deg,var(--bg1),var(--bg2));
+    color:#fff; display:flex; flex-direction:column; align-items:center; gap:12px;
+    padding:16px;
   }
 
-  .topbar{ width:100%; max-width:980px; display:flex; gap:12px; align-items:center; justify-content:space-between; }
-  h1{ margin:0; font-size:1.1rem }
+  .topbar{ width:100%; max-width:980px; display:flex; align-items:center; gap:12px; justify-content:space-between; }
+  h1{ margin:0; font-size:1.1rem; }
 
   .controls{ display:flex; gap:8px; align-items:center; }
-  button{ background:var(--panel); border:none; color:inherit; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:700; }
+  button, select{ background:var(--panel); color:inherit; border:none; padding:8px 10px; border-radius:8px; cursor:pointer; font-weight:700; }
   .diffs{ display:flex; gap:6px; }
   .diffs button.selected{ background:var(--accent); color:#000; }
 
   .stats{ display:flex; gap:12px; align-items:center; background:var(--panel); padding:8px; border-radius:10px; }
-  .stat{ font-size:0.95rem } .stat .value{ font-weight:800; margin-left:6px; }
+  .stat{ font-size:0.95rem; }
+  .stat .value{ font-weight:800; margin-left:6px; color:inherit; }
 
   .board-wrap{ width:100%; max-width:980px; background:var(--panel); padding:12px; border-radius:12px; display:flex; justify-content:center; position:relative; overflow:visible; }
-
   #board{ display:grid; gap:6px; background:#222; padding:6px; border-radius:8px; transition: transform .12s ease; touch-action:none; }
+
   .cell{
-    width:40px; height:40px; background:var(--cell); border-radius:8px;
-    display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--text);
-    user-select:none; cursor:pointer; transition: transform .08s, background .12s, box-shadow .12s;
-    box-shadow:0 2px 0 rgba(0,0,0,0.15); position:relative; overflow:visible;
+    width:var(--cell-size);
+    height:var(--cell-size);
+    background:#d8d8d8;
+    border-radius:8px;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:800; color:#000;
+    user-select:none; cursor:pointer;
+    transition: transform .08s, background .12s, box-shadow .12s;
+    box-shadow: 0 2px 0 rgba(0,0,0,0.18);
+    position:relative; overflow:visible;
   }
   .cell.round{ border-radius:999px; }
   .cell.square{ border-radius:6px; }
-  .cell:active{ transform:scale(.95); }
+
+  .cell:active{ transform: scale(.96); }
   .cell:hover{ filter:brightness(1.06); }
-  .cell.revealed{ background:var(--cell-open); transform:none; box-shadow:none; animation:pop .12s ease; }
-  @keyframes pop{ from{ transform:scale(.96); opacity:.9 } to{ transform:none; opacity:1 } }
 
-  /* numbers black */
-  .cell.revealed.number{ color:#000 }
+  .cell.revealed{ background:#f3f3f3; box-shadow:none; animation:pop .12s ease; }
+  @keyframes pop{ from{ transform: scale(.96); opacity:.9 } to{ transform:none; opacity:1 } }
 
-  /* flag & bomb */
-  .cell.flagged::before{ content:"🚩"; position:absolute; font-size:0.9em; }
-  .cell.bomb::after{ content:"💣"; position:absolute; font-size:0.95em; }
+  .cell.revealed.number{ color:#000; } /* black numbers */
 
-  /* particle base */
-  .particle{ position:fixed; width:8px; height:8px; border-radius:50%; pointer-events:none; z-index:90; will-change:transform,opacity }
+  .cell.flagged::before{ content:"🚩"; position:absolute; font-size:0.9em; top:2px; left:50%; transform:translateX(-50%); }
+  .cell.bomb::after{ content:"💣"; position:absolute; font-size:0.95em; top:2px; left:50%; transform:translateX(-50%); }
 
-  /* smoke-specific */
-  .smoke{ filter: blur(1px); opacity:0.9; border-radius:10px; }
+  /* explosion particle */
+  .particle{
+    position:fixed; width:8px; height:8px; border-radius:50%;
+    pointer-events:none; z-index:100; will-change: transform, opacity;
+  }
+  .particle.square{ border-radius:3px; }
 
   /* screen shake */
-  .shake { animation: shakeAnim 420ms cubic-bezier(.36,.07,.19,.97); }
+  .shake { animation: shakeAnim .45s cubic-bezier(.36,.07,.19,.97); }
   @keyframes shakeAnim{
-    0%{ transform:translateY(0) }
-    10%{ transform:translateY(-6px) rotate(-1deg) }
-    20%{ transform:translateY(6px) rotate(1deg) }
-    30%{ transform:translateY(-4px) rotate(-1deg) }
-    40%{ transform:translateY(4px) rotate(1deg) }
-    50%{ transform:translateY(0) rotate(0) }
+    0%{ transform: translateY(0) } 10%{ transform: translateY(-6px) rotate(-1deg) } 20%{ transform:translateY(6px) rotate(1deg) }
+    30%{ transform:translateY(-4px) rotate(-1deg) } 40%{ transform:translateY(4px) rotate(1deg) } 50%{ transform:translateY(0) rotate(0) }
     100%{ transform:translateY(0) }
   }
 
   /* bottom result bar */
   #resultBar{
     position:fixed; left:50%; transform:translateX(-50%) translateY(120%);
-    bottom:22px; background:var(--panel); color:var(--text); padding:14px 18px;
-    border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,0.35); font-weight:900; transition:transform .35s, opacity .25s; opacity:0; z-index:95;
+    bottom:18px; background:var(--panel); color:inherit; padding:14px 18px; border-radius:12px;
+    box-shadow:0 8px 30px rgba(0,0,0,0.35); font-weight:800; transition: transform .35s, opacity .25s; opacity:0; z-index:120;
   }
   #resultBar.show{ transform:translateX(-50%) translateY(0); opacity:1; }
 
-  /* responsive */
-  @media(max-width:720px){ .cell{ width:34px; height:34px } #board{ gap:5px; padding:5px } }
-  @media(max-width:420px){ .cell{ width:28px; height:28px; font-size:13px } }
+  /* small screens */
+  @media(max-width:720px){ .cell{ width:calc(var(--cell-size) * 0.88); height:calc(var(--cell-size)*0.88) } #board{ gap:5px } }
+  @media(max-width:420px){ .cell{ width:26px;height:26px;font-size:13px } }
 
   /* rules modal */
   #rulesModal{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); align-items:center; justify-content:center; z-index:200; }
-  #rulesBox{ background:#fff; color:#000; padding:18px; border-radius:10px; width:90%; max-width:420px; }
-  #rulesBox h3{ margin-top:0; }
+  #rulesBox{ background:#fff; color:#000; padding:18px; border-radius:10px; width:92%; max-width:420px; }
+  #rulesBox h3{ margin-top:0 }
 </style>
 </head>
 <body>
+
   <div class="topbar">
-    <h1>🎯 Minesweeper — Ultimate</h1>
+    <h1>🎯 Minesweeper — FX</h1>
+
     <div class="controls">
       <button id="newBtn">Новая игра</button>
-      <div class="diffs" id="diffs">
+
+      <div class="diffs" id="diffs" style="margin-left:8px;">
         <button class="selected" data-diff="easy">Легко</button>
         <button data-diff="medium">Средне</button>
         <button data-diff="hard">Сложно</button>
       </div>
-      <select id="particleSelect" title="Тип частиц">
+
+      <select id="explosionType" title="Тип взрыва" style="margin-left:10px;">
         <option value="shards">Осколки</option>
         <option value="smoke">Дым</option>
       </select>
-      <select id="shapeSelect" title="Форма ячеек">
-        <option value="rounded">Круглые</option>
-        <option value="square">Квадратные</option>
+
+      <select id="particleShape" title="Форма частиц" style="margin-left:6px;">
+        <option value="circle">Круг</option>
+        <option value="square">Квадрат</option>
       </select>
-      <button id="themeBtn">Тема</button>
-      <button id="rulesBtn">Правила</button>
-      <button id="downloadBtn">Скачать HTML</button>
+
+      <button id="themeBtn" style="margin-left:10px;">Тема</button>
+      <button id="rulesBtn" style="margin-left:6px;">Правила</button>
     </div>
-    <div class="stats">
-      <div class="stat">⏱ <span class="value" id="timer">0</span>s</div>
-      <div class="stat">💣 <span class="value" id="minesLeft">0</span></div>
-      <div class="stat">🚩 <span class="value" id="flagsCount">0</span></div>
-      <div class="stat">🏆 <span class="value" id="bestRecord">—</span></div>
+
+    <div class="stats" style="margin-left:12px;">
+      <div class="stat">⏱ <span id="timer" class="value">0</span>s</div>
+      <div class="stat">💣 <span id="minesLeft" class="value">10</span></div>
+      <div class="stat">🚩 <span id="flagsCount" class="value">0</span></div>
+      <div class="stat">🏆 <span id="best" class="value">—</span></div>
     </div>
   </div>
 
@@ -129,70 +140,74 @@
     <h3>Правила</h3>
     <ul>
       <li>Левый клик — открыть клетку.</li>
-      <li>ПКМ или долгий тап — поставить/снять флаг (только один флаг в клетке).</li>
-      <li>Число = количество мин рядом.</li>
+      <li>Правый клик или долгий тап — поставить/снять флаг (только один символ флага в клетке).</li>
+      <li>Число = сколько мин рядом.</li>
       <li>Первая открытая клетка всегда безопасна.</li>
     </ul>
     <div style="text-align:right"><button onclick="closeRules()">Закрыть</button></div>
   </div></div>
 
 <script>
-/* -------------------------
-   Config & State
-   ------------------------- */
-const DIFF = {
-  easy:   {rows:9, cols:9, mines:10},
-  medium: {rows:16, cols:16, mines:40},
-  hard:   {rows:16, cols:30, mines:99}
+/* =========================
+   Configuration & state
+   ========================= */
+const DIFFICULTIES = {
+  easy:   {rows:9, cols:9, mines:10, cellPx:36},
+  medium: {rows:12, cols:12, mines:20, cellPx:30},
+  hard:   {rows:16, cols:24, mines:60, cellPx:22}
 };
-let currentDiff = 'easy';
-let rows = DIFF[currentDiff].rows, cols = DIFF[currentDiff].cols, minesTotal = DIFF[currentDiff].mines;
 
-let board = []; // { mine, rev, flag, adj, el }
+let current = 'easy';
+let rows = DIFFICULTIES[current].rows;
+let cols = DIFFICULTIES[current].cols;
+let minesTotal = DIFFICULTIES[current].mines;
+
+let board = []; // matrix of {mine, rev, flag, adj, el}
 let firstClick = true;
 let gameOver = false;
-let flagsCount = 0, minesLeft = minesTotal;
-let timer = 0, timerId = null;
 
+let flagsCount = 0;
+let minesLeft = minesTotal;
+
+let timer = 0, timerId = null;
+const RECORD_KEY = 'ms_fx_records_v1';
+
+/* DOM */
 const boardEl = document.getElementById('board');
 const minesLeftEl = document.getElementById('minesLeft');
 const flagsCountEl = document.getElementById('flagsCount');
 const timerEl = document.getElementById('timer');
 const resultBar = document.getElementById('resultBar');
-const bestRecordEl = document.getElementById('bestRecord');
-const boardWrap = document.getElementById('boardWrap');
+const bestEl = document.getElementById('best');
 
-/* Records storage */
-const RECORD_KEY = 'ms_records_v2';
-function loadRecords(){ try{ return JSON.parse(localStorage.getItem(RECORD_KEY))||{} }catch(e){ return {} } }
-function saveRecord(diff, sec){ const rec = loadRecords(); if(!rec[diff]||sec<rec[diff]){ rec[diff]=sec; localStorage.setItem(RECORD_KEY, JSON.stringify(rec)); return true; } return false; }
-function showBest(){ const rec = loadRecords(); bestRecordEl.textContent = rec[currentDiff] ? rec[currentDiff]+'s' : '—'; }
-
-/* -------------------------
-   Sounds (WebAudio)
-   ------------------------- */
+/* =========================
+   Audio helpers (WebAudio)
+   ========================= */
 let audioCtx = null;
 function ensureAudio(){ if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }
+
 function playClick(){
   try{
     ensureAudio();
-    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
-    o.type='sine'; o.frequency.value=900; g.gain.value=0.0001;
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = 'square'; o.frequency.value = 900;
     o.connect(g); g.connect(audioCtx.destination);
-    const now=audioCtx.currentTime;
-    g.gain.setValueAtTime(0.0001, now);
+    const now = audioCtx.currentTime;
+    g.gain.setValueAtTime(0.0001,now);
     g.gain.exponentialRampToValueAtTime(0.02, now+0.01);
     g.gain.exponentialRampToValueAtTime(0.0001, now+0.12);
     o.start(now); o.stop(now+0.13);
   }catch(e){}
 }
+
 function playExplosion(){
   try{
     ensureAudio();
-    const o1=audioCtx.createOscillator(), o2=audioCtx.createOscillator(), g=audioCtx.createGain();
-    o1.type='sawtooth'; o2.type='square'; o1.frequency.value=180; o2.frequency.value=60;
+    const o1 = audioCtx.createOscillator(), o2 = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o1.type='sawtooth'; o2.type='square'; o1.frequency.value=160; o2.frequency.value=60;
     o1.connect(g); o2.connect(g); g.connect(audioCtx.destination);
-    const now=audioCtx.currentTime;
+    const now = audioCtx.currentTime;
     g.gain.setValueAtTime(0.0001, now);
     g.gain.exponentialRampToValueAtTime(0.2, now+0.02);
     g.gain.exponentialRampToValueAtTime(0.0001, now+0.6);
@@ -200,12 +215,14 @@ function playExplosion(){
     o1.stop(now+0.6); o2.stop(now+0.6);
   }catch(e){}
 }
+
 function playWin(){
   try{
     ensureAudio();
-    const o=audioCtx.createOscillator(), g=audioCtx.createGain();
-    o.type='sine'; o.frequency.value=880; o.connect(g); g.connect(audioCtx.destination);
-    const now=audioCtx.currentTime;
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type='sine'; o.frequency.value=880;
+    o.connect(g); g.connect(audioCtx.destination);
+    const now = audioCtx.currentTime;
     g.gain.setValueAtTime(0.0001, now);
     g.gain.exponentialRampToValueAtTime(0.05, now+0.02);
     g.gain.exponentialRampToValueAtTime(0.0001, now+0.9);
@@ -213,49 +230,92 @@ function playWin(){
   }catch(e){}
 }
 
-/* -------------------------
-   UI & Game functions
-   ------------------------- */
+/* =========================
+   HUD & Records
+   ========================= */
+function updateHUD(){ minesLeftEl.textContent = minesLeft; flagsCountEl.textContent = flagsCount; timerEl.textContent = timer; }
+function loadRecords(){ try{ return JSON.parse(localStorage.getItem(RECORD_KEY))||{} }catch(e){ return {} } }
+function saveRecord(diff, sec){ const rec = loadRecords(); if(!rec[diff] || sec < rec[diff]){ rec[diff]=sec; localStorage.setItem(RECORD_KEY, JSON.stringify(rec)); return true; } return false; }
+function showBest(){ const rec = loadRecords(); bestEl.textContent = rec[current] ? rec[current]+'s' : '—'; }
 
-function setDiff(diff){
-  currentDiff = diff;
-  rows = DIFF[diff].rows; cols = DIFF[diff].cols; minesTotal = DIFF[diff].mines;
-  document.querySelectorAll('#diffs button').forEach(b => b.classList.toggle('selected', b.dataset.diff===diff));
+/* =========================
+   Board creation & sizing
+   ========================= */
+function setDifficulty(diff){
+  current = diff;
+  rows = DIFFICULTIES[diff].rows;
+  cols = DIFFICULTIES[diff].cols;
+  minesTotal = DIFFICULTIES[diff].mines;
+  document.querySelectorAll('#diffs button').forEach(b=>b.classList.toggle('selected', b.dataset.diff===diff));
+  // set CSS cell size
+  const px = DIFFICULTIES[diff].cellPx;
+  document.documentElement.style.setProperty('--cell-size', px + 'px');
   resetGame();
   showBest();
 }
-
-function updateHUD(){ minesLeftEl.textContent = minesLeft; flagsCountEl.textContent = flagsCount; timerEl.textContent = timer; }
+document.querySelectorAll('#diffs button').forEach(b=> b.addEventListener('click', ()=> setDifficulty(b.dataset.diff) ));
 
 function resetGame(){
   stopTimer();
-  firstClick=true; gameOver=false; flagsCount=0; minesLeft = minesTotal; timer=0;
-  updateHUD(); resultBar.classList.remove('show'); resultBar.textContent='';
-  board = []; boardEl.innerHTML=''; boardEl.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-  const shape = document.getElementById('shapeSelect') ? document.getElementById('shapeSelect').value : 'rounded';
+  firstClick = true;
+  gameOver = false;
+  flagsCount = 0;
+  minesLeft = minesTotal;
+  timer = 0;
+  updateHUD();
+  resultBar.classList.remove('show'); resultBar.textContent = '';
+  board = [];
+  boardEl.innerHTML = '';
+  boardEl.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+
+  // create cells
+  const shape = document.getElementById('particleShape') ? document.getElementById('particleShape').value : 'circle';
   for(let r=0;r<rows;r++){
-    const row=[];
+    const row = [];
     for(let c=0;c<cols;c++){
       const div = document.createElement('div');
-      div.className = 'cell ' + (shape==='rounded' ? 'round' : 'square');
-      div.dataset.r=r; div.dataset.c=c;
-      // events
-      div.addEventListener('click', ()=> cellClick(r,c));
-      div.addEventListener('contextmenu', (e)=>{ e.preventDefault(); cellFlag(r,c); });
+      div.className = 'cell ' + (shape==='circle' ? 'round' : 'square');
+      div.dataset.r = r; div.dataset.c = c;
+      div.addEventListener('click', ()=> onCellClick(r,c));
+      div.addEventListener('contextmenu', (e)=>{ e.preventDefault(); onCellFlag(r,c); });
       // mobile long-press
-      let t = null;
-      div.addEventListener('touchstart', (ev)=>{ ev.preventDefault(); t=setTimeout(()=>cellFlag(r,c), 600); });
-      div.addEventListener('touchend', ()=>{ clearTimeout(t); });
-      div.addEventListener('touchmove', ()=>{ clearTimeout(t); });
+      let t=null;
+      div.addEventListener('touchstart', (e)=>{ e.preventDefault(); t = setTimeout(()=> onCellFlag(r,c), 600); });
+      div.addEventListener('touchend', ()=> clearTimeout(t)); div.addEventListener('touchmove', ()=> clearTimeout(t));
       boardEl.appendChild(div);
       row.push({ mine:false, rev:false, flag:false, adj:0, el:div });
     }
     board.push(row);
   }
   fitBoard();
-  showBest();
 }
 
+/* adjust board scaling to viewport so it fits */
+function fitBoard(){
+  requestAnimationFrame(()=>{
+    try{
+      const wrapTop = boardEl.getBoundingClientRect().top;
+      const availH = window.innerHeight - wrapTop - 140; // leave space for bottom bar
+      const cell = document.querySelector('.cell');
+      if(!cell) return;
+      const cellSize = parseFloat(getComputedStyle(cell).width);
+      const gap = parseFloat(getComputedStyle(boardEl).gap) || 6;
+      const needed = rows * (cellSize + gap);
+      if(needed > availH){
+        const scale = (availH / needed) * 0.98;
+        boardEl.style.transform = `scale(${scale})`;
+        boardEl.style.transformOrigin = 'top center';
+      } else {
+        boardEl.style.transform = 'none';
+      }
+    }catch(e){}
+  });
+}
+window.addEventListener('resize', fitBoard);
+
+/* =========================
+   Mines placement & numbers
+   ========================= */
 function placeMines(avoidR, avoidC){
   let placed=0;
   while(placed < minesTotal){
@@ -263,12 +323,13 @@ function placeMines(avoidR, avoidC){
     const c = Math.floor(Math.random()*cols);
     if(Math.abs(r-avoidR)<=1 && Math.abs(c-avoidC)<=1) continue;
     if(board[r][c].mine) continue;
-    board[r][c].mine = true; placed++;
+    board[r][c].mine = true;
+    placed++;
   }
-  // compute adjacency
+  // adjacency
   for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
     if(board[r][c].mine) continue;
-    let cnt=0;
+    let cnt = 0;
     for(let i=-1;i<=1;i++) for(let j=-1;j<=1;j++){
       const nr=r+i, nc=c+j;
       if(nr>=0 && nr<rows && nc>=0 && nc<cols && board[nr][nc].mine) cnt++;
@@ -277,19 +338,22 @@ function placeMines(avoidR, avoidC){
   }
 }
 
-function cellClick(r,c){
+/* =========================
+   Reveal / flag / win / lose
+   ========================= */
+function onCellClick(r,c){
   if(gameOver) return;
   const cell = board[r][c];
   if(cell.rev || cell.flag) return;
   playClick();
   if(firstClick){
-    firstClick=false;
+    firstClick = false;
     placeMines(r,c);
     startTimer();
   }
   if(cell.mine){
-    // explosion: particles + screen shake + sound
-    triggerParticlesAt(cell.el);
+    // explosion
+    triggerExplosionAt(cell.el);
     triggerShake();
     revealAllMines(r,c);
     lose();
@@ -304,27 +368,24 @@ function revealArea(r,c){
   if(cell.rev || cell.flag) return;
   cell.rev = true;
   cell.el.classList.add('revealed');
-  if(cell.adj>0){
-    cell.el.classList.add('number');
-    cell.el.textContent = cell.adj;
-    return;
-  }
-  // smooth expansion
+  if(cell.adj > 0){ cell.el.classList.add('number'); cell.el.textContent = cell.adj; return; }
+  // expand neighbors with slight delays for smooth look
   for(let i=-1;i<=1;i++) for(let j=-1;j<=1;j++){
     const nr=r+i, nc=c+j;
     if(nr>=0 && nr<rows && nc>=0 && nc<cols){
-      if(!board[nr][nc].rev) setTimeout(()=> revealArea(nr,nc), 8);
+      if(!board[nr][nc].rev) setTimeout(()=> revealArea(nr,nc), 6);
     }
   }
 }
 
-function cellFlag(r,c){
+function onCellFlag(r,c){
   if(gameOver) return;
   const cell = board[r][c];
   if(cell.rev) return;
-  // ensure single symbol: clear before set
+  // toggle flag ensuring single symbol
   cell.flag = !cell.flag;
-  cell.el.textContent = ''; cell.el.classList.remove('flagged');
+  cell.el.textContent = '';
+  cell.el.classList.remove('flagged');
   if(cell.flag){
     flagsCount++;
     cell.el.classList.add('flagged'); cell.el.textContent = '🚩';
@@ -333,7 +394,7 @@ function cellFlag(r,c){
   }
   minesLeft = minesTotal - flagsCount;
   updateHUD();
-  // optional quick win check
+  // quick check
   checkWin();
 }
 
@@ -348,49 +409,53 @@ function revealAllMines(explodedR, explodedC){
   }
 }
 
-/* win/lose */
 function lose(){
-  gameOver=true; stopTimer(); playExplosion(); showResult(false); playExplosion(); /* sound twice for oomph */ 
+  gameOver = true;
+  stopTimer();
+  playExplosion();
+  showResult(false);
 }
+
 function checkWin(){
   for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
     const cell = board[r][c];
     if(!cell.mine && !cell.rev) return;
   }
-  // win
-  gameOver=true; stopTimer(); playWin(); const isNew = saveRecord(currentDiff, timer); showResult(true, isNew); showBest();
+  gameOver = true;
+  stopTimer();
+  playWin();
+  const isNew = saveRecordIfBetter(current, timer);
+  showResult(true, isNew);
+  showBest();
 }
 
-/* show bottom bar */
-function showResult(win, isNew=false){
-  resultBar.textContent = win ? `🎉 ПОБЕДА! За ${timer}s${isNew ? ' — новый рекорд!' : ''}` : '💥 ПОРАЖЕНИЕ!';
-  resultBar.classList.add('show');
-  setTimeout(()=> resultBar.classList.remove('show'), 6000);
-}
+/* =========================
+   Timer
+   ========================= */
+function startTimer(){ if(timerId) return; timer = 0; timerEl.textContent = timer; timerId = setInterval(()=>{ timer++; timerEl.textContent = timer; }, 1000); }
+function stopTimer(){ if(timerId){ clearInterval(timerId); timerId = null; } }
 
-/* -------------------------
-   Particles (shards or smoke)
-   ------------------------- */
-function triggerParticlesAt(el){
+/* =========================
+   Explosion particles & camera
+   ========================= */
+function triggerExplosionAt(el){
   const rect = el.getBoundingClientRect();
   const cx = rect.left + rect.width/2;
   const cy = rect.top + rect.height/2;
-  const type = document.getElementById('particleSelect').value;
-
-  // container
+  const type = document.getElementById('explosionType').value; // 'shards'|'smoke'
+  const shape = document.getElementById('particleShape').value; // 'circle'|'square'
   const container = document.createElement('div');
   container.style.position='fixed'; container.style.left='0'; container.style.top='0';
   container.style.width='100%'; container.style.height='100%'; container.style.pointerEvents='none';
   document.body.appendChild(container);
 
-  const colors = ['#ffea00','#ff6b00','#ff3b3b','#ffc107','#fff3e0'];
+  const colors = type === 'smoke' ? ['#bdbdbd','#9e9e9e','#6e6e6e','#cfcfcf'] : ['#ffea00','#ff6b00','#ff3b3b','#ffc107','#fff3e0'];
+  const count = type === 'smoke' ? 18 : 30;
 
-  // create particles
-  const count = (type==='smoke') ? 18 : 28;
   for(let i=0;i<count;i++){
     const p = document.createElement('div');
-    p.className='particle ' + (type==='smoke' ? 'smoke' : '');
-    const size = (type==='smoke') ? (8 + Math.random()*18) : (6 + Math.random()*8);
+    p.className = 'particle ' + (shape==='square' ? 'square' : '');
+    const size = (type==='smoke') ? (12 + Math.random()*24) : (6 + Math.random()*8);
     p.style.width = p.style.height = size + 'px';
     p.style.left = (cx - size/2) + 'px';
     p.style.top = (cy - size/2) + 'px';
@@ -398,99 +463,86 @@ function triggerParticlesAt(el){
     container.appendChild(p);
 
     const angle = Math.random()*Math.PI*2;
-    const dist = (type==='smoke') ? (40 + Math.random()*140) : (60 + Math.random()*200);
-    const dx = Math.cos(angle)*dist;
-    const dy = Math.sin(angle)*dist - (type==='smoke'?20:0);
+    const distance = (type==='smoke') ? (40 + Math.random()*140) : (60 + Math.random()*220);
+    const dx = Math.cos(angle)*distance;
+    const dy = Math.sin(angle)*distance - (type==='smoke'?20:0);
     const rot = (Math.random()*720 - 360);
-
     const duration = 600 + Math.random()*700;
 
-    // animate via Web Animations
     p.animate([
       { transform: 'translate(0,0) rotate(0deg) scale(1)', opacity:1, filter: (type==='smoke' ? 'blur(0px)' : 'none') },
-      { transform: `translate(${dx}px, ${dy}px) rotate(${rot}deg) scale(${type==='smoke'?1.6:0.6})`, opacity:0, filter: (type==='smoke' ? 'blur(3px)' : 'none') }
+      { transform: `translate(${dx}px, ${dy}px) rotate(${rot}deg) scale(${type==='smoke'?1.6:0.4})`, opacity:0, filter: (type==='smoke' ? 'blur(4px)' : 'none') }
     ], { duration: duration, easing: 'cubic-bezier(.2,.8,.2,1)', fill:'forwards' });
 
     setTimeout(()=>{ try{ p.remove(); }catch(e){} }, duration+80);
   }
+
   setTimeout(()=>{ try{ container.remove(); }catch(e){} }, 2000);
 }
 
-/* screen shake (add class to boardWrap or body) */
 function triggerShake(){
-  const el = document.body;
-  el.classList.add('shake');
-  setTimeout(()=> el.classList.remove('shake'), 420);
+  document.body.classList.add('shake');
+  setTimeout(()=> document.body.classList.remove('shake'), 420);
 }
 
-/* -------------------------
-   Timer
-   ------------------------- */
-function startTimer(){ if(timerId) return; timer=0; timerEl.textContent=timer; timerId = setInterval(()=>{ timer++; timerEl.textContent=timer; }, 1000); }
-function stopTimer(){ if(timerId){ clearInterval(timerId); timerId=null; } }
+/* =========================
+   Result bar
+   ========================= */
+function showResult(win, isNew=false){
+  resultBar.textContent = win ? `🎉 ПОБЕДА! За ${timer}s${isNew ? ' — новый рекорд!' : ''}` : '💥 ПОРАЖЕНИЕ!';
+  resultBar.classList.add('show');
+  setTimeout(()=> resultBar.classList.remove('show'), 5500);
+}
 
-/* -------------------------
-   Utils: fit board
-   ------------------------- */
-function fitBoard(){
-  requestAnimationFrame(()=>{
-    const wrapTop = boardEl.getBoundingClientRect().top;
-    const availH = window.innerHeight - wrapTop - 120;
-    const cell = document.querySelector('.cell');
-    if(!cell) return;
-    const cellSize = parseFloat(getComputedStyle(cell).width);
-    const gap = parseFloat(getComputedStyle(boardEl).gap) || 6;
-    const needed = rows * (cellSize + gap);
-    if(needed > availH){
-      const scale = (availH / needed) * 0.98;
-      boardEl.style.transform = `scale(${scale})`; boardEl.style.transformOrigin='top center';
-    } else {
-      boardEl.style.transform = 'none';
+/* =========================
+   Records helper
+   ========================= */
+function saveRecordIfBetter(diff, seconds){
+  try{
+    const raw = localStorage.getItem(RECORD_KEY);
+    const rec = raw ? JSON.parse(raw) : {};
+    if(!rec[diff] || seconds < rec[diff]){
+      rec[diff] = seconds;
+      localStorage.setItem(RECORD_KEY, JSON.stringify(rec));
+      return true;
     }
-  });
-}
-window.addEventListener('resize', fitBoard);
-
-/* -------------------------
-   Export current page HTML
-   ------------------------- */
-function downloadHTML(){
-  // Build a clean HTML snapshot (documentElement.outerHTML) and download
-  const html = '<!doctype html>\n' + document.documentElement.outerHTML;
-  const blob = new Blob([html], {type: 'text/html;charset=utf-8'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = 'index.html';
-  document.body.appendChild(a); a.click();
-  setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 1500);
+  }catch(e){}
+  return false;
 }
 
-/* -------------------------
-   Wire up UI controls
-   ------------------------- */
+/* =========================
+   UI bindings
+   ========================= */
 document.getElementById('newBtn').addEventListener('click', resetGame);
-document.getElementById('downloadBtn').addEventListener('click', downloadHTML);
 document.getElementById('themeBtn').addEventListener('click', ()=> document.body.classList.toggle('dark'));
-document.getElementById('rulesBtn').addEventListener('click', ()=> document.getElementById('rulesModal').style.display='flex');
-function closeRules(){ document.getElementById('rulesModal').style.display='none'; }
+document.getElementById('rulesBtn').addEventListener('click', ()=> document.getElementById('rulesModal').style.display = 'flex');
+function closeRules(){ document.getElementById('rulesModal').style.display = 'none'; }
+document.getElementById('explosionType').value = 'shards';
+document.getElementById('particleShape').value = 'circle';
 
-document.querySelectorAll('#diffs button').forEach(b=>{
-  b.addEventListener('click', ()=> setDiff(b.dataset.diff));
-});
-document.getElementById('shapeSelect').addEventListener('change', ()=>{
-  // update existing cells shape
-  const shape = document.getElementById('shapeSelect').value;
+/* change particle shape immediately for created cells */
+document.getElementById('particleShape').addEventListener('change', ()=>{
+  const shape = document.getElementById('particleShape').value;
   document.querySelectorAll('.cell').forEach(el=>{
-    el.classList.toggle('round', shape==='rounded');
+    el.classList.toggle('round', shape==='circle');
     el.classList.toggle('square', shape==='square');
   });
 });
-document.getElementById('particleSelect').addEventListener('change', ()=>{ /* visual only */ });
+
+/* difficulty buttons */
+document.querySelectorAll('#diffs button').forEach(btn=>{
+  btn.addEventListener('click', ()=> setDifficulty(btn.dataset.diff) );
+});
+
+/* resize/fix on load */
+window.addEventListener('resize', fitBoard);
 
 /* initial setup */
-resetGame();
-showBest();
+setDifficulty(current);
 
+/* expose small helpers for debugging (optional) */
+window._ms_reset = resetGame;
+window._ms_state = ()=> ({rows,cols,minesTotal,flagsCount,firstClick,gameOver});
 </script>
 </body>
 </html>
