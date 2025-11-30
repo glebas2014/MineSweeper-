@@ -2,206 +2,325 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Minesweeper FX</title>
+<title>Minesweeper</title>
 <style>
-:root{
-  --bg1:#667eea;
-  --bg2:#764ba2;
-  --panel: rgba(255,255,255,0.08);
-  --accent: #ffffff40;
-  --cell-size:36px;
-}
-*{box-sizing:border-box}
 body{
-    font-family: Inter, Arial, sans-serif;
-    background: linear-gradient(135deg,var(--bg1),var(--bg2));
-    margin:0;display:flex;flex-direction:column;align-items:center;padding:18px;color:#fff;min-height:100vh;
+    font-family: Arial, sans-serif;
+    background:#ececec;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    margin:0;
+    padding:0;
 }
-.container{width:100%;max-width:720px}
-.header{display:flex;align-items:center;justify-content:space-between;gap:12px}
-h1{font-size:1.25rem;margin:0}
-.controls{display:flex;gap:8px;margin:12px 0;flex-wrap:wrap}
-button{padding:8px 12px;border-radius:8px;border:none;background:var(--panel);color:inherit;cursor:pointer;font-weight:600;transition:transform .12s ease,background .12s}
-button:active{transform:scale(.98)}
-#difficulty{display:flex;gap:8px}
-.diff-btn{padding:6px 10px;border-radius:8px;background:transparent}
-.diff-btn.selected{background:var(--accent)}
-.toolbar{display:flex;gap:12px;align-items:center}
-.stats{display:flex;gap:12px;align-items:center;background:var(--panel);padding:8px;border-radius:10px}
-.stat{font-size:0.9rem}
-.stat .value{font-weight:700;font-size:1.05rem}
 
-.board-wrap{margin-top:12px;background:var(--panel);padding:10px;border-radius:12px;display:flex;justify-content:center;overflow:hidden}
-#board{display:grid;gap:4px;padding:4px;border-radius:8px;background:#2f2f2f;touch-action:none;transition:transform .15s ease}
+h1{ margin-top:10px; }
+
+#controls{
+    display:flex;
+    gap:15px;
+    margin:10px 0;
+    flex-wrap:wrap;
+    justify-content:center;
+}
+
+#board{
+    display:grid;
+    margin-top:10px;
+    transition:transform 0.15s ease;
+}
 
 .cell{
-  width:var(--cell-size);
-  height:var(--cell-size);
-  background:#cfcfcf;
-  border-radius:6px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-weight:700;
-  user-select:none;
-  cursor:pointer;
-  box-shadow:0 2px 0 rgba(0,0,0,0.15);
-  transition:transform .12s,background .12s,color .12s,box-shadow .12s;
-  font-size:calc(var(--cell-size)/2);
-  color:#000;
-}
-.cell:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.28)}
-.cell.revealed{background:#f3f3f3;transform:none;box-shadow:none}
-.cell.flagged{background:#fff;color:#000}
-.cell.flagged::before{content:"🚩";font-size:1.2rem}
-.cell.mine.revealed::before{content:"💣";font-size:1.2rem}
-.number-1,.number-2,.number-3,.number-4,.number-5,.number-6,.number-7,.number-8{color:#000}
-
-.cell.revealed{animation:pop .12s ease}
-@keyframes pop{from{transform:scale(.96);opacity:.9}to{transform:none;opacity:1}}
-
-.explosion{
-    position:absolute;pointer-events:none;width:6px;height:6px;background:#d6d6d6;animation:burst .5s ease-out forwards;
-}
-@keyframes burst{
-  0%{transform:translate(0,0) scale(1);opacity:1}
-  100%{transform:translate(var(--tx),var(--ty)) scale(0.2);opacity:0}
+    width:32px;
+    height:32px;
+    border:1px solid #999;
+    background:#d0d0d0;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    font-weight:bold;
+    font-size:18px;
+    cursor:pointer;
+    user-select:none;
+    transition:background 0.15s, transform 0.1s;
 }
 
-#resultText{margin-top:14px;font-size:1.4rem;font-weight:700;text-shadow:0 2px 4px #00000070;height:32px;text-align:center}
-.select-panel{display:flex;gap:8px;align-items:center;margin-left:auto;margin-top:4px;}
+.cell:hover{
+    background:#c2c2c2;
+}
+
+.revealed{
+    background:#e5e5e5 !important;
+    cursor:default;
+}
+
+.mine{
+    background:#ff6060 !important;
+}
+
+.flag{
+    background:#ffd966;
+}
+
+#result{
+    margin-top:20px;
+    font-size:24px;
+    font-weight:bold;
+    height:30px;
+}
+
+/* адаптация под телефон */
+@media (max-width:600px){
+    .cell{
+        width:26px;
+        height:26px;
+        font-size:16px;
+    }
+}
+@media (max-width:450px){
+    .cell{
+        width:22px;
+        height:22px;
+        font-size:14px;
+    }
+}
+/* тряска */
+.shake{
+    animation:shake 0.3s ease;
+}
+
+@keyframes shake{
+    0%{ transform:translate(0,0); }
+    25%{ transform:translate(-6px,4px); }
+    50%{ transform:translate(6px,-4px); }
+    75%{ transform:translate(-6px,-4px); }
+    100%{ transform:translate(0,0); }
+}
+
+/* частицы */
+.particle{
+    position:fixed;
+    width:8px;
+    height:8px;
+    background:#ff3b3b;
+    pointer-events:none;
+    border-radius:2px;
+    animation:fly 0.5s forwards ease-out;
+}
+
+@keyframes fly{
+    from{ transform:translate(0,0) scale(1); opacity:1; }
+    to{ transform:translate(var(--tx), var(--ty)) scale(0.2); opacity:0; }
+}
 </style>
 </head>
+
 <body>
-<div class="container">
-  <div class="header">
-    <h1>🎯 Minesweeper FX</h1>
-    <div class="toolbar">
-      <div class="stats">
-        <div class="stat">Мины: <span id="mines-remaining" class="value">10</span></div>
-        <div class="stat">Флаги: <span id="flags-count" class="value">0</span></div>
-        <div class="stat">Время: <span id="timer" class="value">0</span>s</div>
-      </div>
-    </div>
-  </div>
 
-  <div class="controls">
-    <button id="newBtn">Новая игра</button>
-    <div id="difficulty">
-      <button class="diff-btn selected" data-diff="easy">Легко</button>
-      <button class="diff-btn" data-diff="medium">Средне</button>
-      <button class="diff-btn" data-diff="hard">Сложно</button>
-    </div>
-  </div>
+<h1>Minesweeper</h1>
 
-  <div class="select-panel">
-    <label>Эффект взрыва:
-      <select id="explosionEffect">
-        <option value="shards">Осколки</option>
-        <option value="smoke">Дым</option>
-      </select>
-    </label>
-  </div>
-
-  <div class="board-wrap"><div id="board"></div></div>
-  <div id="resultText"></div>
+<div id="controls">
+    <button onclick="setDifficulty('easy')">Легко</button>
+    <button onclick="setDifficulty('medium')">Средне</button>
+    <button onclick="setDifficulty('hard')">Сложно</button>
+    <button onclick="newGame()">Новая игра</button>
 </div>
 
+<div id="board"></div>
+
+<div id="result"></div>
+
 <script>
-const difficulties={
-  easy:{rows:9,cols:9,mines:10,cellSize:36},
-  medium:{rows:16,cols:16,mines:40,cellSize:24},
-  hard:{rows:16,cols:30,mines:99,cellSize:18}
-};
-let current='easy',rows,cols,mines,board,first,timer,flags,gameState,timerId;
-const boardEl=document.getElementById('board');
-const minesRemEl=document.getElementById('mines-remaining');
-const flagsEl=document.getElementById('flags-count');
-const timerEl=document.getElementById('timer');
-const resultText=document.getElementById('resultText');
-const explosionEffectSelect=document.getElementById('explosionEffect');
+let rows, cols, mines;
+let board = [];
+let gameOver = false;
+let currentDifficulty = "easy";
 
-function updateStats(){minesRemEl.textContent=mines-flags;flagsEl.textContent=flags;timerEl.textContent=timer;}
-function resetDims(){rows=difficulties[current].rows;cols=difficulties[current].cols;mines=difficulties[current].mines;document.documentElement.style.setProperty('--cell-size',difficulties[current].cellSize+'px');}
-function setDifficulty(d){ current=d; resetDims(); document.querySelectorAll('.diff-btn').forEach(b=>b.classList.toggle('selected', b.dataset.diff===d)); newGame(); }
-
-document.getElementById('difficulty').addEventListener('click',e=>{if(e.target.classList.contains('diff-btn'))setDifficulty(e.target.dataset.diff);});
-document.getElementById('newBtn').addEventListener('click',newGame);
-
-function startTimer(){stopTimer();timer=0;timerId=setInterval(()=>{timer++;updateStats();},1000);}
-function stopTimer(){if(timerId){clearInterval(timerId);timerId=null;}}
+function setDifficulty(d){
+    currentDifficulty = d;
+    newGame();
+}
 
 function newGame(){
-    resetDims();stopTimer();first=true;gameState='playing';flags=0;timer=0;updateStats();resultText.textContent='';boardEl.innerHTML='';boardEl.style.gridTemplateColumns=`repeat(${cols},1fr)`;board=[];
-    for(let r=0;r<rows;r++){board[r]=[];for(let c=0;c<cols;c++){const cell=document.createElement('div');cell.className='cell';cell.dataset.r=r;cell.dataset.c=c;boardEl.appendChild(cell);
-    board[r][c]={mine:false,rev:false,flag:false,adj:0,el:cell};
-    cell.addEventListener('click',()=>clickCell(r,c));
-    cell.addEventListener('contextmenu',ev=>{ev.preventDefault();toggleFlag(r,c);});
-    let pressTimer=null;
-    cell.addEventListener('touchstart',()=>{pressTimer=setTimeout(()=>toggleFlag(r,c),600);});
-    cell.addEventListener('touchend',()=>clearTimeout(pressTimer));
-    }}
-    fitBoard();
-}
+    gameOver = false;
+    document.getElementById("result").textContent = "";
 
-function fitBoard(){
-    const wrap=document.querySelector('.board-wrap');
-    const availableWidth=wrap.clientWidth - 10;
-    const availableHeight=window.innerHeight - wrap.getBoundingClientRect().top - 40;
-    const cellSize=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cell-size'));
-    const gap=parseFloat(getComputedStyle(boardEl).gap);
-    const neededWidth=cols*(cellSize + gap);
-    const neededHeight=rows*(cellSize + gap);
-    let scale=Math.min(availableWidth/neededWidth, availableHeight/neededHeight, 1);
-    scale=Math.max(scale, 16/cellSize);
-    boardEl.style.transform=`scale(${scale})`;
-    boardEl.style.transformOrigin='top center';
-}
-window.addEventListener('resize', fitBoard);
+    if(currentDifficulty === "easy"){
+        rows = cols = 9;
+        mines = 10;
+    }else if(currentDifficulty === "medium"){
+        rows = cols = 14;
+        mines = 25;
+    }else{
+        rows = cols = 18;
+        mines = 45;
+    }
 
-function placeMines(fr,fc){let p=0;while(p<mines){let r=Math.floor(Math.random()*rows),c=Math.floor(Math.random()*cols);if(Math.abs(r-fr)<=1&&Math.abs(c-fc)<=1)continue;if(board[r][c].mine)continue;board[r][c].mine=true;p++;}
-for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){if(board[r][c].mine)continue;let cnt=0;for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++){let nr=r+i,nc=c+j;if(nr>=0&&nr<rows&&nc>=0&&nc<cols&&board[nr][nc].mine)cnt++;}board[r][c].adj=cnt;}}
+    const boardDiv = document.getElementById("board");
 
-function clickCell(r,c){if(gameState!=='playing')return;const o=board[r][c];if(o.rev||o.flag)return;if(first){first=false;placeMines(r,c);startTimer();}
-if(o.mine){explode(r,c);gameOver(false);return;}reveal(r,c);checkWin();}
+    // адаптивное уменьшение клеток при увеличении сложности
+    if(currentDifficulty === "easy"){
+        boardDiv.style.setProperty("--size","32px");
+    }else if(currentDifficulty === "medium"){
+        boardDiv.style.setProperty("--size","26px");
+    }else{
+        boardDiv.style.setProperty("--size","22px");
+    }
 
-function reveal(r,c){const o=board[r][c];if(o.rev||o.flag)return;o.rev=true;o.el.classList.add('revealed');if(o.adj>0){o.el.textContent=o.adj;o.el.classList.add('number-'+o.adj);return;}for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++){let nr=r+i,nc=c+j;if(nr>=0&&nr<rows&&nc>=0&&nc<cols)reveal(nr,nc);}}
+    boardDiv.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+    boardDiv.innerHTML = "";
+    board = [];
 
-function toggleFlag(r,c){if(gameState!=='playing')return;const o=board[r][c];if(o.rev)return;o.flag=!o.flag;if(o.flag){flags++;o.el.innerHTML="🚩";}else{flags--;o.el.innerHTML="";}updateStats();checkWin();}
+    // создать поле
+    for (let r = 0; r < rows; r++){
+        board[r] = [];
+        for (let c = 0; c < cols; c++){
+            const cell = document.createElement("div");
+            cell.className = "cell";
+            cell.dataset.r = r;
+            cell.dataset.c = c;
 
-function explode(r,c){
-    const cell=board[r][c].el;
-    if(!cell.classList.contains("mine")){ // чтобы бомба одна
-        const rect=cell.getBoundingClientRect();
-        const effect=explosionEffectSelect.value;
-        let count = current==="easy"?32: current==="medium"?48: 64;
-        for(let i=0;i<count;i++){
-            if(current!=="easy" && Math.random()<0.4) continue;
-            const p=document.createElement("div");
-            p.className="explosion";
-            p.style.borderRadius="0%";
-            const x = rect.left+rect.width/2;
-            const y = rect.top+rect.height/2;
-            p.style.left=x+"px";
-            p.style.top=y+"px";
-            let tx=(Math.random()*200-100);
-            let ty=(Math.random()*200-100);
-            if(effect==="smoke"){tx*=0.5;ty*=0.5;p.style.background="#888";} // дым медленнее и серый
-            p.style.setProperty("--tx",tx+"px");
-            p.style.setProperty("--ty",ty+"px");
-            document.body.appendChild(p);
-            setTimeout(()=>p.remove(),500);
+            cell.addEventListener("click", leftClick);
+            cell.addEventListener("contextmenu", rightClick);
+
+            boardDiv.appendChild(cell);
+            board[r][c] = { mine:false, revealed:false, flagged:false, el:cell };
         }
-        cell.classList.add("revealed","mine");
+    }
+
+    // расставить мины
+    let placed = 0;
+    while(placed < mines){
+        let r = Math.floor(Math.random()*rows);
+        let c = Math.floor(Math.random()*cols);
+        if(!board[r][c].mine){
+            board[r][c].mine = true;
+            placed++;
+        }
     }
 }
 
-function revealAll(){for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)if(board[r][c].mine)board[r][c].el.innerHTML='💣';}
-function checkWin(){let safe=0;for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)if(!board[r][c].mine&&!board[r][c].rev)safe++;if(safe===0)gameOver(true);}
-function gameOver(win){gameState=win?'win':'lose';stopTimer();if(!win)revealAll();resultText.textContent=win?`🎉 Победа! Время: ${timer}s`:`💥 Поражение`;}
+function leftClick(e){
+    if(gameOver) return;
+    const r = +e.target.dataset.r;
+    const c = +e.target.dataset.c;
+
+    reveal(r,c);
+}
+
+function rightClick(e){
+    e.preventDefault();
+    if(gameOver) return;
+
+    const r = +e.target.dataset.r;
+    const c = +e.target.dataset.c;
+
+    const cell = board[r][c];
+
+    if(cell.revealed) return;
+
+    cell.flagged = !cell.flagged;
+    cell.el.textContent = cell.flagged ? "🚩" : "";
+}
+
+function reveal(r,c){
+    const cell = board[r][c];
+    if(cell.revealed || cell.flagged) return;
+
+    cell.revealed = true;
+    cell.el.classList.add("revealed");
+
+    if(cell.mine){
+        explode(r,c);
+        gameOver = true;
+        document.getElementById("result").textContent = "❌ Поражение";
+        return;
+    }
+
+    const n = countMines(r,c);
+    if(n > 0){
+        cell.el.textContent = n;
+        cell.el.style.color = "black";
+    }else{
+        // раскрыть соседей
+        for(let dr=-1; dr<=1; dr++){
+            for(let dc=-1; dc<=1; dc++){
+                let rr=r+dr, cc=c+dc;
+                if(rr>=0 && rr<rows && cc>=0 && cc<cols){
+                    if(!board[rr][cc].revealed) reveal(rr,cc);
+                }
+            }
+        }
+    }
+
+    checkWin();
+}
+
+function countMines(r,c){
+    let count=0;
+    for(let dr=-1; dr<=1; dr++){
+        for(let dc=-1; dc<=1; dc++){
+            let rr=r+dr, cc=c+dc;
+            if(rr>=0 && rr<rows && cc>=0 && cc<cols){
+                if(board[rr][cc].mine) count++;
+            }
+        }
+    }
+    return count;
+}
+
+function explode(r,c){
+    const cell = board[r][c].el;
+
+    // одна бомба
+    cell.textContent = "💣";
+
+    const rect = cell.getBoundingClientRect();
+
+    // тряска поля
+    const boardDiv = document.getElementById("board");
+    boardDiv.classList.add("shake");
+    setTimeout(()=>boardDiv.classList.remove("shake"),300);
+
+    // большое количество частиц
+    let particleCount = currentDifficulty === "easy" ? 40 :
+                        currentDifficulty === "medium" ? 70 : 100;
+
+    for(let i=0;i<particleCount;i++){
+
+        // пропуск частиц на сложных уровнях
+        if(currentDifficulty !== "easy" && Math.random() < 0.25) continue;
+
+        const p = document.createElement("div");
+        p.className = "particle";
+
+        p.style.left = (rect.left + 15) + "px";
+        p.style.top = (rect.top + 15) + "px";
+
+        // случайный разлет
+        p.style.setProperty("--tx", (Math.random()*300 - 150) + "px");
+        p.style.setProperty("--ty", (Math.random()*300 - 150) + "px");
+
+        document.body.appendChild(p);
+
+        setTimeout(()=>p.remove(),500);
+    }
+}
+
+function checkWin(){
+    for(let r=0;r<rows;r++){
+        for(let c=0;c<cols;c++){
+            if(!board[r][c].mine && !board[r][c].revealed){
+                return;
+            }
+        }
+    }
+    gameOver = true;
+    document.getElementById("result").textContent = "🎉 Победа!";
+}
 
 newGame();
 </script>
+
 </body>
 </html>
