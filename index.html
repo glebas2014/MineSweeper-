@@ -1,124 +1,236 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Minesweeper — Магма Неон</title>
 <style>
 :root{
-  --bg-1:#070306; --bg-2:#13040a;
-  --accent-1:#ff8b1a; --accent-2:#ff3b00; --accent-3:#ffd07a;
-  --cell-size:36px; --min-cell:14;
+  --bg1:#070306;
+  --bg2:#13040a;
+  --accent1:#ff8b1a;
+  --accent2:#ff3b00;
+  --accent3:#ffd07a;
+  --cell-size:36px;
+  --min-cell:14px;
 }
-*{box-sizing:border-box}
-html,body{margin:0;height:100%;font-family:Inter,sans-serif;background:linear-gradient(180deg,var(--bg-1),var(--bg-2));color:#fff;display:flex;flex-direction:column;align-items:center;padding:14px;gap:12px}
 
-/* Top UI */
-.top{width:100%;max-width:1100px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
-h1{margin:0;font-size:1.15rem;text-shadow:0 8px 30px rgba(255,80,10,0.04);}
-.controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
-button{background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));color:#fff;border:0;padding:8px 10px;border-radius:10px;cursor:pointer;font-weight:700;backdrop-filter:blur(2px);}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:12px;background:linear-gradient(180deg,var(--bg1),var(--bg2));font-family:Inter,sans-serif;color:#fff;}
+body{display:flex;flex-direction:column;align-items:center;gap:12px;}
+
+.top{width:100%;max-width:1100px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;}
+h1{margin:0;font-size:1.2rem;text-shadow:0 4px 10px rgba(255,80,10,0.2);}
+.controls{display:flex;gap:8px;align-items:center;}
+button{background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));color:#fff;border:0;padding:6px 10px;border-radius:8px;font-weight:700;cursor:pointer;}
 button:active{transform:scale(.98);}
-.diffs{display:flex;gap:6px;}
-.diffs button{padding:6px 10px;border-radius:10px;background:transparent;}
-.diffs button.selected{background:linear-gradient(90deg,var(--accent-1),var(--accent-2));color:#120202;box-shadow:0 8px 30px rgba(255,80,20,0.16);}
-.hud{display:flex;gap:12px;align-items:center;background:linear-gradient(180deg, rgba(0,0,0,0.2), rgba(255,255,255,0.02));padding:8px;border-radius:10px;}
-.stat{font-weight:700;color:var(--accent-3);}
-.stat .value{margin-left:6px;color:#fff;text-shadow:0 6px 18px rgba(255,90,20,0.08);}
+.diffs button{padding:4px 8px;border-radius:6px;background:transparent;}
+.diffs button.selected{background:linear-gradient(90deg,var(--accent1),var(--accent2));color:#120202;}
 
-/* board container */
-.board-wrap{width:100%;max-width:1100px;background:linear-gradient(180deg, rgba(10,3,2,0.2), rgba(0,0,0,0.45));padding:12px;border-radius:14px;display:flex;justify-content:center;overflow:hidden;position:relative;}
-#board{display:grid;gap:6px;padding:6px;border-radius:10px;background:linear-gradient(180deg,#120406,#0b0203);touch-action:none;transition:transform .14s ease}
+.hud{display:flex;gap:12px;align-items:center;background:rgba(0,0,0,0.25);padding:6px 10px;border-radius:8px;}
+.stat{font-weight:700;color:var(--accent3);}
+.stat .value{margin-left:4px;color:#fff;text-shadow:0 4px 12px rgba(255,90,20,0.08);}
 
-/* cells */
-.cell{width:var(--cell-size);height:var(--cell-size);background:linear-gradient(180deg,#0d0606,#170707);border-radius:8px;box-shadow:inset 0 -6px 14px rgba(0,0,0,0.7),0 8px 18px rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;font-weight:900;user-select:none;cursor:pointer;position:relative;overflow:visible;transition:transform .08s ease,box-shadow .12s ease,background .18s ease;color:#000;}
-.cell:hover{transform:translateY(-6px);box-shadow:0 18px 40px rgba(255,120,40,0.06);}
-.cell.revealed{background:linear-gradient(180deg,#ffe8c8,#ffd9b0);box-shadow:none;transform:none;}
-.num{font-weight:900;color:#0b0b0b;text-shadow:0 8px 22px rgba(255,120,40,0.65);font-size:calc(var(--cell-size)*0.54);}
-.cell.flagged{background:linear-gradient(180deg,#2f1208,#3b150a);color:#fff;}
-.cell.flagged::before{content:"🚩";font-size:1em;position:relative;z-index:2;}
-.cell.mine{background:linear-gradient(180deg,#3a0a05,#56120a);color:#fff;}
-.cell.mine::before{content:"";position:absolute;width:60%;height:60%;border-radius:6px;background:radial-gradient(circle at 30% 20%, rgba(255,190,60,0.95), rgba(255,80,20,0.9) 12%, transparent 35%);box-shadow:0 0 40px rgba(255,120,40,0.6);transform:translateY(0);z-index:0;}
-.cell.wrong{background:#f2d1c0;color:#000;}
-.particle{position:fixed;pointer-events:none;border-radius:2px;z-index:9999;will-change:transform,opacity;box-shadow:0 6px 18px rgba(255,100,30,0.25);}
+.board-wrap{background:linear-gradient(180deg, rgba(10,3,2,0.2), rgba(0,0,0,0.45));padding:10px;border-radius:10px;display:flex;justify-content:center;overflow:hidden;position:relative;}
+#board{display:grid;gap:4px;}
+
+.cell{
+  width:var(--cell-size); height:var(--cell-size);
+  background:linear-gradient(180deg,#0d0606,#170707);
+  border-radius:4px;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700;user-select:none;cursor:pointer;
+  color:#000; transition:0.1s;
+}
+.cell.revealed{background:linear-gradient(180deg,#ffe8c8,#ffd9b0);}
+.cell:hover{transform:translateY(-2px);}
+.cell.flagged::before{content:"🚩";}
+.cell.mine.revealed::before{content:"💣";}
+
+.num{color:#000;font-weight:900;font-size:calc(var(--cell-size)*0.5);text-shadow:0 4px 12px rgba(255,80,20,0.5);}
+
+.particle{
+  position:fixed;pointer-events:none;width:6px;height:6px;background:#ff8b1a;z-index:9999;
+}
+
 .shake{animation:shakeBig .72s cubic-bezier(.36,.07,.19,.97);}
-@keyframes shakeBig{0%{transform:translate(0,0)}10%{transform:translate(-10px,6px) rotate(-0.5deg)}20%{transform:translate(10px,-8px) rotate(0.6deg)}30%{transform:translate(-12px,-6px) rotate(-0.9deg)}40%{transform:translate(12px,6px) rotate(0.8deg)}50%{transform:translate(-6px,6px) rotate(-0.4deg)}60%{transform:translate(6px,-6px) rotate(0.4deg)}70%{transform:translate(-4px,4px) rotate(-0.2deg)}100%{transform:translate(0,0) rotate(0)}}
-#resultBar{position:fixed;left:50%;transform:translateX(-50%) translateY(120%);bottom:18px;padding:12px 18px;border-radius:12px;background:linear-gradient(90deg,#6b0f00,#2b0500);color:#ffd7a8;font-weight:900;box-shadow:0 18px 50px rgba(0,0,0,0.6);opacity:0;transition:transform .35s,opacity .25s;z-index:120;}
-#resultBar.show{transform:translateX(-50%) translateY(0);opacity:1;}
-@media(max-width:720px){:root{--cell-size:28px;}}
-@media(max-width:420px){:root{--cell-size:24px;}}
+@keyframes shakeBig{
+  0%{transform:translate(0,0);}10%{transform:translate(-10px,6px) rotate(-0.5deg);}20%{transform:translate(10px,-8px) rotate(0.6deg);}
+  30%{transform:translate(-12px,-6px) rotate(-0.9deg);}40%{transform:translate(12px,6px) rotate(0.8deg);}
+  50%{transform:translate(-6px,6px) rotate(-0.4deg);}60%{transform:translate(6px,-6px) rotate(0.4deg);}
+  70%{transform:translate(-4px,4px) rotate(-0.2deg);}100%{transform:translate(0,0) rotate(0);}
+}
 
+#resultBar{
+  position:fixed; left:50%; transform:translateX(-50%) translateY(120%);
+  bottom:18px; padding:12px 18px; border-radius:12px;
+  background:linear-gradient(90deg,#6b0f00,#2b0500); color:#ffd7a8; font-weight:900;
+  box-shadow:0 18px 50px rgba(0,0,0,0.6); opacity:0; transition:transform .35s,opacity .25s; z-index:120;
+}
+#resultBar.show{transform:translateX(-50%) translateY(0);opacity:1;}
+
+@media(max-width:720px){:root{--cell-size:28px;}}
+@media(max-width:420px){:root{--cell-size:22px;}}
 </style>
 </head>
 <body>
-
 <div class="top">
 <h1>🔥 Minesweeper — Магма Неон</h1>
 <div style="display:flex;gap:12px;align-items:center">
-<div class="controls">
-<div class="diffs" id="diffs">
-<button data-diff="easy" class="selected">Легко</button>
-<button data-diff="medium">Средне</button>
-<button data-diff="hard">Сложно</button>
-</div>
-<button id="newBtn">Новая игра</button>
-</div>
-<div class="hud">
-<div class="stat">💣 <span id="minesLeft" class="value">0</span></div>
-<div class="stat">🚩 <span id="flagsCount" class="value">0</span></div>
-<div class="stat">⏱ <span id="timer" class="value">0</span>s</div>
-</div>
+  <div class="controls">
+    <div class="diffs" id="diffs">
+      <button data-diff="easy" class="selected">Легко</button>
+      <button data-diff="medium">Средне</button>
+      <button data-diff="hard">Сложно</button>
+    </div>
+    <button id="newBtn">Новая игра</button>
+  </div>
+  <div class="hud">
+    <div class="stat">💣<span id="minesLeft" class="value">0</span></div>
+    <div class="stat">🚩<span id="flagsCount" class="value">0</span></div>
+    <div class="stat">⏱<span id="timer" class="value">0</span>s</div>
+  </div>
 </div>
 </div>
 
 <div class="board-wrap" id="boardWrap">
-<div id="board"></div>
+  <div id="board"></div>
 </div>
 
 <div id="resultBar"></div>
 
 <script>
-const DIFF={easy:{rows:9,cols:9,mines:10,cellPx:36},medium:{rows:14,cols:14,mines:30,cellPx:28},hard:{rows:16,cols:24,mines:70,cellPx:20}};
-let current='easy',rows=9,cols=9,minesTotal=10,board=[],firstClick=true,gameState='playing',flagsCount=0,minesLeft=10,timer=0,timerId=null;
-const boardEl=document.getElementById('board'),boardWrap=document.getElementById('boardWrap'),minesLeftEl=document.getElementById('minesLeft'),flagsCountEl=document.getElementById('flagsCount'),timerEl=document.getElementById('timer'),resultBar=document.getElementById('resultBar');
+const DIFF = {
+  easy:{rows:9,cols:9,mines:10,cellPx:36},
+  medium:{rows:14,cols:14,mines:30,cellPx:28},
+  hard:{rows:16,cols:24,mines:70,cellPx:20}
+};
+let current='easy',rows=DIFF[current].rows,cols=DIFF[current].cols,minesTotal=DIFF[current].mines;
+let board=[],firstClick=true,gameState='playing',flagsCount=0,minesLeft=minesTotal,timer=0,timerId=null;
+
+const boardEl=document.getElementById('board');
+const boardWrap=document.getElementById('boardWrap');
+const minesLeftEl=document.getElementById('minesLeft');
+const flagsCountEl=document.getElementById('flagsCount');
+const timerEl=document.getElementById('timer');
+const resultBar=document.getElementById('resultBar');
 
 function updateHUD(){minesLeftEl.textContent=minesLeft;flagsCountEl.textContent=flagsCount;timerEl.textContent=timer;}
-function startTimer(){if(timerId)return;timer=0;timerEl.textContent=0;timerId=setInterval(()=>{timer++;timerEl.textContent=timer;},1000);}
+function startTimer(){if(timerId)return;timer=0;timerEl.textContent=timer;timerId=setInterval(()=>{timer++;timerEl.textContent=timer;},1000);}
 function stopTimer(){if(timerId){clearInterval(timerId);timerId=null;}}
 
-function applySizing(){const cfg=DIFF[current];rows=cfg.rows;cols=cfg.cols;minesTotal=cfg.mines;minesLeft=minesTotal;document.documentElement.style.setProperty('--cell-size',cfg.cellPx+'px');}
-function fitBoard(){requestAnimationFrame(()=>{const cfg=DIFF[current];const baseCell=cfg.cellPx;const gap=6;const neededW=cols*(baseCell+gap);const neededH=rows*(baseCell+gap);const wrapRect=boardWrap.getBoundingClientRect();const availW=Math.min(wrapRect.width-8,window.innerWidth-32);const availH=Math.max(window.innerHeight-wrapRect.top-120,120);let scale=Math.min(availW/neededW,availH/neededH,1);scale=Math.max(scale,14/baseCell);boardEl.style.transform=`scale(${scale})`;boardEl.style.transformOrigin='top center';});}
+function initGame(){
+  stopTimer();firstClick=true;gameState='playing';flagsCount=0;minesLeft=DIFF[current].mines;timer=0;updateHUD();
+  resultBar.classList.remove('show'); resultBar.textContent='';
+  board=[]; boardEl.innerHTML=''; 
+  boardEl.style.gridTemplateColumns = `repeat(${cols}, var(--cell-size))`;
+  boardEl.style.gridTemplateRows = `repeat(${rows}, var(--cell-size))`;
 
-function initGame(){stopTimer();firstClick=true;gameState='playing';flagsCount=0;minesLeft=minesTotal;timer=0;updateHUD();resultBar.classList.remove('show');resultBar.textContent='';board=[];boardEl.innerHTML='';boardEl.style.gridTemplateColumns=`repeat(${cols},1fr)`;for(let r=0;r<rows;r++){const row=[];for(let c=0;c<cols;c++){const el=document.createElement('div');el.className='cell';el.dataset.r=r;el.dataset.c=c;el.tabIndex=0;el.addEventListener('click',()=>onClickCell(r,c));el.addEventListener('contextmenu',(e)=>{e.preventDefault();onFlag(r,c);});boardEl.appendChild(el);row.push({mine:false,rev:false,flag:false,adj:0,el});}board.push(row);}fitBoard();}
+  for(let r=0;r<rows;r++){
+    const row=[];
+    for(let c=0;c<cols;c++){
+      const el=document.createElement('div'); el.className='cell';
+      el.dataset.r=r; el.dataset.c=c;
+      el.addEventListener('click',()=>clickCell(r,c));
+      el.addEventListener('contextmenu',e=>{e.preventDefault();toggleFlag(r,c);});
+      boardEl.appendChild(el);
+      row.push({mine:false,rev:false,flag:false,adj:0,el});
+    }
+    board.push(row);
+  }
+}
 
-function placeMines(avoidR,avoidC){let placed=0;while(placed<minesTotal){const r=Math.floor(Math.random()*rows),c=Math.floor(Math.random()*cols);if(Math.abs(r-avoidR)<=1&&Math.abs(c-avoidC)<=1)continue;if(board[r][c].mine)continue;board[r][c].mine=true;placed++;}for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){if(board[r][c].mine)continue;let cnt=0;for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){const nr=r+dr,nc=c+dc;if(nr>=0&&nr<rows&&nc>=0&&nc<cols&&board[nr][nc].mine)cnt++;}board[r][c].adj=cnt;}}
+function placeMines(fr,fc){
+  let p=0;
+  while(p<minesTotal){
+    const r=Math.floor(Math.random()*rows),c=Math.floor(Math.random()*cols);
+    if(Math.abs(r-fr)<=1 && Math.abs(c-fc)<=1) continue;
+    if(board[r][c].mine) continue;
+    board[r][c].mine=true;p++;
+  }
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+    if(board[r][c].mine) continue; let cnt=0;
+    for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){
+      const nr=r+dr,nc=c+dc; if(nr>=0&&nr<rows&&nc>=0&&nc<cols&&board[nr][nc].mine) cnt++;
+    }
+    board[r][c].adj=cnt;
+  }
+}
 
-function onClickCell(r,c){if(gameState!=='playing')return;const o=board[r][c];if(o.rev||o.flag)return;if(firstClick){firstClick=false;placeMines(r,c);startTimer();}if(o.mine){triggerStrongExplosion(r,c);revealAllMines();lose();return;}floodReveal(r,c);checkWin();}
+function clickCell(r,c){
+  if(gameState!=='playing') return; const o=board[r][c];
+  if(o.rev||o.flag) return;
+  if(firstClick){firstClick=false; placeMines(r,c); startTimer();}
+  if(o.mine){triggerExplosion(r,c); revealAllMines(); lose(); return;}
+  floodReveal(r,c); checkWin();
+}
 
-function onFlag(r,c){if(gameState!=='playing')return;const o=board[r][c];if(o.rev)return;o.flag=!o.flag;if(o.flag){flagsCount++;o.el.classList.add('flagged');o.el.textContent='🚩';}else{flagsCount=Math.max(0,flagsCount-1);o.el.classList.remove('flagged');o.el.textContent='';}minesLeft=Math.max(0,minesTotal-flagsCount);updateHUD();checkWin();}
+function floodReveal(r,c){
+  const o=board[r][c]; if(o.rev||o.flag) return;
+  o.rev=true; o.el.classList.add('revealed');
+  if(o.adj>0){o.el.innerHTML=`<span class="num">${o.adj}</span>`; return;}
+  for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){
+    const nr=r+dr,nc=c+dc;if(nr>=0&&nr<rows&&nc>=0&&nc<cols) floodReveal(nr,nc);
+  }
+}
 
-function floodReveal(r,c){const o=board[r][c];if(o.rev||o.flag)return;o.rev=true;o.el.classList.add('revealed');if(o.adj>0){o.el.innerHTML=`<span class="num">${o.adj}</span>`;return;}for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){const nr=r+dr,nc=c+dc;if(nr>=0&&nr<rows&&nc>=0&&nc<cols)floodReveal(nr,nc);}}
+function toggleFlag(r,c){
+  if(gameState!=='playing') return;
+  const o=board[r][c]; if(o.rev) return;
+  o.flag=!o.flag;
+  if(o.flag){flagsCount++; o.el.classList.add('flagged'); o.el.textContent='🚩';} 
+  else{flagsCount=Math.max(0,flagsCount-1); o.el.classList.remove('flagged'); o.el.textContent='';}
+  minesLeft=Math.max(0,minesTotal-flagsCount); updateHUD(); checkWin();
+}
 
-function revealAllMines(){for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const o=board[r][c];if(o.mine){o.rev=true;o.el.classList.add('revealed','mine');o.el.textContent='💣';}else if(o.flag&&!o.mine){o.el.classList.add('revealed','wrong');o.el.textContent='✖';}}}
+function revealAllMines(){
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+    const o=board[r][c];
+    if(o.mine){o.rev=true;o.el.classList.add('revealed','mine');o.el.textContent='💣';}
+    else if(o.flag&&!o.mine){o.el.classList.add('revealed'); o.el.textContent='✖';}
+  }
+}
 
-function checkWin(){for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const o=board[r][c];if(!o.mine&&!o.rev)return;}win();}
-function win(){gameState='win';stopTimer();showResult(`🎉 ПОБЕДА! ${timer}s`);boardWrap.animate([{filter:'brightness(1)'},{filter:'brightness(1.12)'}],{duration:420,fill:'forwards'});}
+function checkWin(){for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){if(!board[r][c].mine&&!board[r][c].rev) return;} win();}
+function win(){gameState='win';stopTimer();showResult(`🎉 ПОБЕДА! ${timer}s`);}
 function lose(){gameState='lose';stopTimer();showResult('💥 ПОРАЖЕНИЕ');}
 
-function showResult(text){resultBar.textContent=text;resultBar.classList.add('show');setTimeout(()=>resultBar.classList.remove('show'),6000);}
+function showResult(text){resultBar.textContent=text;resultBar.classList.add('show');setTimeout(()=>resultBar.classList.remove('show'),5000);}
 
-function triggerStrongExplosion(r,c){const o=board[r][c];o.el.classList.add('revealed','mine');o.el.textContent='💣';boardWrap.classList.add('shake');setTimeout(()=>boardWrap.classList.remove('shake'),720);const rect=o.el.getBoundingClientRect();const cx=rect.left+rect.width/2;const cy=rect.top+rect.height/2;const density=current==='easy'?40:current==='medium'?70:110;const attempts=Math.floor(density*1.6);for(let i=0;i<attempts;i++){if(current!=='easy'&&Math.random()<0.45)continue;const p=document.createElement('div');p.className='particle';const palette=['#ff8b1a','#ff3b00','#ffcf6b','#ff6b00','#b32a00'];p.style.background=palette[Math.floor(Math.random()*palette.length)];const size=(Math.random()*8+6)*(current==='hard'?0.85:current==='medium'?0.95:1.0);p.style.width=p.style.height=size+'px';const jitterX=(Math.random()*12-6),jitterY=(Math.random()*12-6);p.style.left=(cx+jitterX)+'px';p.style.top=(cy+jitterY)+'px';document.body.appendChild(p);const angle=Math.random()*Math.PI*2;const baseDistance=current==='hard'?360:current==='medium'?260:160;const distance=(Math.random()*baseDistance)+(current==='hard'?40:20);const tx=Math.cos(angle)*distance+(Math.random()*40-20),ty=Math.sin(angle)*distance-(Math.random()*80+20);p.animate([{transform:'translate(0,0) scale(1)',opacity:1},{transform:`translate(${tx}px,${ty}px) scale(0.28)`,opacity:0}],{duration:600+Math.random()*800,easing:'cubic-bezier(.2,.9,.2,1)',fill:'forwards'});setTimeout(()=>{try{p.remove();}catch(e){}},1600+Math.random()*800);}}
+/* explosion: strong shake + particles */
+function triggerExplosion(r,c){
+  const o=board[r][c]; o.el.classList.add('revealed','mine'); o.el.textContent='💣';
+  boardWrap.classList.add('shake'); setTimeout(()=>boardWrap.classList.remove('shake'),720);
+
+  const rect=o.el.getBoundingClientRect(), cx=rect.left+rect.width/2, cy=rect.top+rect.height/2;
+  const density = current==='easy'?40:current==='medium'?70:110;
+
+  for(let i=0;i<density;i++){
+    if(current!=='easy' && Math.random()<0.45) continue;
+    const p=document.createElement('div'); p.className='particle';
+    const colors=['#ff8b1a','#ff3b00','#ffcf6b','#ff6b00','#b32a00'];
+    p.style.background=colors[Math.floor(Math.random()*colors.length)];
+    const size=(Math.random()*6+4)*(current==='hard'?0.85:current==='medium'?0.95:1); p.style.width=p.style.height=size+'px';
+    const jitterX=Math.random()*12-6, jitterY=Math.random()*12-6;
+    p.style.left=(cx+jitterX)+'px'; p.style.top=(cy+jitterY)+'px';
+    document.body.appendChild(p);
+
+    const angle=Math.random()*2*Math.PI;
+    const baseDistance=current==='hard'?360:current==='medium'?260:160;
+    const distance=(Math.random()*baseDistance)+(current==='hard'?40:20);
+    const tx=Math.cos(angle)*distance+(Math.random()*40-20), ty=Math.sin(angle)*distance-(Math.random()*80+20);
+
+    p.animate([{transform:'translate(0,0) scale(1)',opacity:1},{transform:`translate(${tx}px,${ty}px) scale(0.28)`,opacity:0}],
+    {duration:600+Math.random()*800,easing:'cubic-bezier(.2,.9,.2,1)',fill:'forwards'});
+    setTimeout(()=>{try{p.remove();}catch(e){}},1600+Math.random()*800);
+  }
+}
 
 /* UI bindings */
 document.getElementById('newBtn').addEventListener('click',()=>initGame());
-document.querySelectorAll('#diffs button').forEach(b=>{b.addEventListener('click',()=>{current=b.dataset.diff;document.querySelectorAll('#diffs button').forEach(x=>x.classList.toggle('selected',x.dataset.diff===current));applySizing();initGame();fitBoard();});});
-
-/* window resize */
-window.addEventListener('resize',fitBoard);
-
-/* initial */
-applySizing();initGame();fitBoard();
+document.querySelectorAll('#diffs button').forEach(b=>b.addEventListener('click',()=>setDifficulty(b.dataset.diff)));
+function setDifficulty(diff){current=diff;document.querySelectorAll('#diffs button').forEach(b=>b.classList.toggle('selected',b.dataset.diff===diff));initGame();}
+initGame();
 </script>
-
 </body>
 </html>
